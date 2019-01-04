@@ -6,6 +6,10 @@ static phy_addr_t cpu_pc = 0;
 static struct regfile_s cpu_regfile;
 static struct csmr_s csmr;
 
+static char verbose = 0;
+
+#define verbose_print(...) do { if(verbose) printf(__VA_ARGS__); } while(0)
+
 int
 cpu_exec_init(int memory_size)
 {
@@ -22,6 +26,41 @@ cpu_reset(void)
   memset(&csmr, sizeof csmr, 0);
 }
 
+static inline void
+cpu_set_reg(uint16_t addr, cpu_word_t val)
+{
+  if(addr >= 32)
+  {
+    fprintf(stderr, "cpu_set_reg() invalid register index at PC=%#x\n", cpu_pc);
+    exit(1);
+  }
+  verbose_print("set %d <- %d\n", addr, val);
+  cpu_regfile.r[addr] = val;
+  if(addr == 31) printf("sp(%x) ==%x\n", cpu_pc, val);
+}
+
+static inline cpu_word_t
+cpu_get_reg(uint16_t addr)
+{
+  if(addr >= 32)
+  {
+    fprintf(stderr, "cpu_get_reg() invalid register index at PC=%#x, index=%#x\n", cpu_pc, addr);
+    exit(1);
+  }
+  return cpu_regfile.r[addr];
+}
+
+static inline phy_signed_addr_t
+rel26_sig_ext(uint32_t rel26)
+{
+  if(rel26 & (1 << 25))
+  {
+    return 0xf0000000 | (rel26 <<= INSN_LEN_SHIFT);
+  }
+  else
+    return rel26 << INSN_LEN_SHIFT;
+}
+
 int
 cpu_exec(void)
 {
@@ -34,9 +73,17 @@ cpu_exec(void)
       uint16_t rs1 = INS32_GET_BITS(current_ins, RS1);
       uint16_t rs2 = INS32_GET_BITS(current_ins, RS2);
       uint16_t rd = INS32_GET_BITS(current_ins, RD);
-      uint16_t imm16 = INS32_GET_BITS(current_ins, IMM16);
-      uint16_t rel26 = INS32_GET_BITS(current_ins, REL26);
+      uint16_t uimm16 = INS32_GET_BITS(current_ins, IMM16);
+      int16_t simm16 = (int16_t)uimm16;
+      uint32_t rel26 = INS32_GET_BITS(current_ins, REL26);
       
+      if(cpu_pc==8) verbose_print("%d %d\n", opcode, aluopc);
+      if(cpu_pc < 0x330 && 1)
+        {
+          verbose_print("PC=%#x\n", cpu_pc);
+          //printf("PC=%#x\n", cpu_pc);
+        }
+        
       switch( opcode )
         {
           case INS32_OP_GRPSI:
@@ -44,21 +91,21 @@ cpu_exec(void)
               switch( aluopc )
                 {
                   case INS32_SUBOP_add:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] + cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) + cpu_get_reg(rs2));
                     break;
                     
                   case INS32_SUBOP_sub:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] - cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) - cpu_get_reg(rs2));
                     break;
                     
                   case INS32_SUBOP_cmpeq:
-                    csmr.psr.cf = (cpu_regfile.r[rs1] == cpu_regfile.r[rs2]);
+                    csmr.psr.cf = (cpu_get_reg(rs1) == cpu_get_reg(rs2));
                     break;
                   case INS32_SUBOP_cmpgt:
-                    csmr.psr.cf = (cpu_regfile.r[rs1] > cpu_regfile.r[rs2]);
+                    csmr.psr.cf = (cpu_get_reg(rs1) > cpu_get_reg(rs2));
                     break;
                   case INS32_SUBOP_cmpgt_u:
-                    csmr.psr.cf = ( (cpu_unsigned_word_t)(cpu_regfile.r[rs1]) > (cpu_unsigned_word_t)(cpu_regfile.r[rs2]) );
+                    csmr.psr.cf = ( (cpu_unsigned_word_t)(cpu_get_reg(rs1)) > (cpu_unsigned_word_t)(cpu_get_reg(rs2)) );
                     break;
                     
                   default:
@@ -73,11 +120,11 @@ cpu_exec(void)
                 {
                   case INS32_SUBOP_mul:
                   case INS32_SUBOP_mul_u:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] - cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) - cpu_get_reg(rs2));
                     break;
                   case INS32_SUBOP_div:
                   case INS32_SUBOP_div_u:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] / cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) / cpu_get_reg(rs2));
                     break;
                     
                   default:
@@ -91,27 +138,27 @@ cpu_exec(void)
               switch( aluopc )
                 {
                   case INS32_SUBOP_and:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] & cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) & cpu_get_reg(rs2));
                     break;
                     
                   case INS32_SUBOP_or:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] | cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) | cpu_get_reg(rs2));
                     break;
                     
                   case INS32_SUBOP_xor:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] ^ cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) ^ cpu_get_reg(rs2));
                     break;
                     
                   case INS32_SUBOP_lsl:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] << cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) << cpu_get_reg(rs2));
                     break;
                     
                   case INS32_SUBOP_lsr:
-                    cpu_regfile.r[rd] = (cpu_unsigned_word_t)cpu_regfile.r[rs1] >> cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, (cpu_unsigned_word_t)cpu_get_reg(rs1) >> cpu_get_reg(rs2));
                     break;
                   
                   case INS32_SUBOP_asr:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1] >> cpu_regfile.r[rs2];
+                    cpu_set_reg(rd, cpu_get_reg(rs1) >> cpu_get_reg(rs2));
                     break;
                     
                   default:
@@ -124,12 +171,8 @@ cpu_exec(void)
             {
               switch( aluopc )
                 {
-                  case INS32_SUBOP_mov:
-                    cpu_regfile.r[rd] = cpu_regfile.r[rs1];
-                    break;
-                    
                   case INS32_SUBOP_cmov:
-                    cpu_regfile.r[rd] = cpu_regfile.r[csmr.psr.cf ? rs1 : rs2];
+                    cpu_set_reg(rd, cpu_regfile.r[csmr.psr.cf ? rs1 : rs2]);
                     break;
                     
                   default:
@@ -143,12 +186,14 @@ cpu_exec(void)
               switch( aluopc )
                 {
                   case INS32_SUBOP_jmp:
-                    cpu_pc = cpu_regfile.r[rs1];
+                    if(rs1 == ADDR_RLNK) { verbose_print("return %x\n", cpu_get_reg(rs1)); }
+
+                    cpu_pc = cpu_get_reg(rs1);
                     goto flush_pc;
                     
                   case INS32_SUBOP_jmpl:
-                    cpu_pc = cpu_regfile.r[rs1];
-                    cpu_regfile.r[ADDR_RLNK] = cpu_pc; /* link the returning address */
+                    cpu_set_reg(ADDR_RLNK, cpu_pc + INSN_LEN); /* link the returning address */
+                    cpu_pc = cpu_get_reg(rs1);
                     break;
                     
                   default:
@@ -158,31 +203,31 @@ cpu_exec(void)
             break;
             
           case INS32_OP_add_i:
-            cpu_regfile.r[rd] = cpu_regfile.r[rs1] + (cpu_word_t)imm16;
+            cpu_set_reg(rd, cpu_get_reg(rs1) + (cpu_word_t)simm16);
             break;
             
           case INS32_OP_and_i:
-            cpu_regfile.r[rd] = cpu_regfile.r[rs1] & imm16;
+            cpu_set_reg(rd, cpu_get_reg(rs1) & uimm16);
             break;
           
           case INS32_OP_or_i:
-            cpu_regfile.r[rd] = cpu_regfile.r[rs1] | imm16;
+            cpu_set_reg(rd, cpu_get_reg(rs1) | uimm16);
             break;
             
           case INS32_OP_xor_i:
-            cpu_regfile.r[rd] = cpu_regfile.r[rs1] ^ imm16;
+            cpu_set_reg(rd, cpu_get_reg(rs1) ^ simm16);
             break;
             
           case INS32_OP_lsl_i:
-            cpu_regfile.r[rd] = cpu_regfile.r[rs1] << imm16;
+            cpu_set_reg(rd, cpu_get_reg(rs1) << uimm16);
             break;
             
           case INS32_OP_lsr_i:
-            cpu_regfile.r[rd] = (cpu_unsigned_word_t)cpu_regfile.r[rs1] >> imm16;
+            cpu_set_reg(rd, (cpu_unsigned_word_t)cpu_get_reg(rs1) >> uimm16);
             break;
           
           case INS32_OP_asr_i:
-            cpu_regfile.r[rd] = cpu_regfile.r[rs1] >> imm16;
+            cpu_set_reg(rd, cpu_get_reg(rs1) >> uimm16);
             break;
             
           case INS32_OP_cmp_i:
@@ -192,23 +237,23 @@ cpu_exec(void)
               switch(subopc)
                 {
                   case INS32_OP_cmpeq_i:
-                    csmr.psr.cf = ( cpu_regfile.r[rs1] == (cpu_word_t)imm16 );
+                    csmr.psr.cf = ( cpu_get_reg(rs1) == (cpu_word_t)simm16 );
                     break;
                     
                   case INS32_OP_cmpgt_i:
-                    csmr.psr.cf = ( cpu_regfile.r[rs1] > (cpu_word_t)imm16 );
+                    csmr.psr.cf = ( cpu_get_reg(rs1) > (cpu_word_t)simm16 );
                     break;
                     
                   case INS32_OP_cmpgt_ui:
-                    csmr.psr.cf = ( (cpu_unsigned_word_t)(cpu_regfile.r[rs1]) > (cpu_unsigned_word_t)imm16 );
+                    csmr.psr.cf = ( (cpu_unsigned_word_t)(cpu_get_reg(rs1)) > (cpu_unsigned_word_t)simm16 );
                     break;
                     
                   case INS32_OP_cmplt_i:
-                    csmr.psr.cf = ( cpu_regfile.r[rs1] < (cpu_word_t)imm16 );
+                    csmr.psr.cf = ( cpu_get_reg(rs1) < (cpu_word_t)simm16 );
                     break;
                     
                   case INS32_OP_cmplt_ui:
-                    csmr.psr.cf = ( cpu_regfile.r[rs1] < (cpu_unsigned_word_t)imm16 );
+                    csmr.psr.cf = ( cpu_get_reg(rs1) < (cpu_unsigned_word_t)simm16 );
                     break;
                     
                   default:
@@ -218,7 +263,7 @@ cpu_exec(void)
             break;
             
           case INS32_OP_movh:
-            cpu_regfile.r[rd] = cpu_regfile.r[rs1] | ((cpu_word_t)imm16 << 16);
+            cpu_set_reg(rd, (cpu_word_t)uimm16 << 16);
             break;
             
           case INS32_OP_rdsmr:
@@ -228,38 +273,40 @@ cpu_exec(void)
             
           case INS32_OP_ldb:
             {
-              phy_addr_t addr = cpu_regfile.r[rs1] + (cpu_word_t)imm16;
-              cpu_regfile.r[rd] = (cpu_word_t)readm8(addr);
+              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm16;
+              verbose_print("ld(%x) %d <- &%x\n", cpu_pc, rd, addr );
+              cpu_set_reg(rd, (cpu_word_t)readm8(addr));
             }
             break;
           case INS32_OP_ldb_u:
             {
-              phy_addr_t addr = cpu_regfile.r[rs1] + (cpu_word_t)imm16;
-              cpu_regfile.r[rd] = (cpu_unsigned_word_t)readm8(addr);
+              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm16;
+              cpu_set_reg(rd, (cpu_unsigned_word_t)readm8(addr));
             }
             break;
           case INS32_OP_ldh:
             {
-              phy_addr_t addr = cpu_regfile.r[rs1] + (cpu_word_t)imm16;
-              cpu_regfile.r[rd] = (cpu_word_t)readm16(addr);
+              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm16;
+              cpu_set_reg(rd, (cpu_word_t)readm16(addr));
             }
             break;
           case INS32_OP_ldh_u:
             {
-              phy_addr_t addr = cpu_regfile.r[rs1] + (cpu_word_t)imm16;
-              cpu_regfile.r[rd] = (cpu_unsigned_word_t)readm16(addr);
+              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm16;
+              cpu_set_reg(rd, (cpu_unsigned_word_t)readm16(addr));
             }
             break;
           case INS32_OP_ldw:
             {
-              phy_addr_t addr = cpu_regfile.r[rs1] + (cpu_word_t)imm16;
-              cpu_regfile.r[rd] = (cpu_word_t)readm32(addr);
+              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm16;
+              cpu_set_reg(rd, (cpu_word_t)readm32(addr));
             }
             break;
           case INS32_OP_ldw_u:
             {
-              phy_addr_t addr = cpu_regfile.r[rs1] + (cpu_word_t)imm16;
-              cpu_regfile.r[rd] = (cpu_unsigned_word_t)readm32(addr);
+              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm16;
+              cpu_set_reg(rd, (cpu_unsigned_word_t)readm32(addr));
+              printf("ld(%x) %d <- &%x(%d)\n", cpu_pc, rd, addr, (cpu_unsigned_word_t)readm32(addr) );
             }
             break;
           case INS32_OP_ldwa:
@@ -267,20 +314,21 @@ cpu_exec(void)
             
           case INS32_OP_stb:
             {
-              phy_addr_t addr = cpu_regfile.r[rd] + (cpu_word_t)imm16;
-              writem8(addr, (uint8_t)cpu_regfile.r[rs1]);
+              phy_addr_t addr = cpu_get_reg(rd) + (cpu_word_t)simm16;
+              writem8(addr, (uint8_t)cpu_get_reg(rs1));
             }
             break;
           case INS32_OP_sth:
             {
-              phy_addr_t addr = cpu_regfile.r[rd] + (cpu_word_t)imm16;
-              writem16(addr, (uint16_t)cpu_regfile.r[rs1]);
+              phy_addr_t addr = cpu_get_reg(rd) + (cpu_word_t)simm16;
+              writem16(addr, (uint16_t)cpu_get_reg(rs1));
             }
             break;
           case INS32_OP_stw:
             {
-              phy_addr_t addr = cpu_regfile.r[rd] + (cpu_word_t)imm16;
-              writem32(addr, (uint32_t)cpu_regfile.r[rs1]);
+              phy_addr_t addr = cpu_get_reg(rd) + (cpu_word_t)simm16;
+              writem32(addr, (uint32_t)cpu_get_reg(rs1));
+              printf("stw(%x) %d(%d) -> &%x\n", cpu_pc, rs1, cpu_get_reg(rs1), addr );
             }
             break;
             
@@ -288,18 +336,18 @@ cpu_exec(void)
             break;
             
           case INS32_OP_jmps:
-            cpu_pc = cpu_pc + ((phy_addr_t)rel26 << INSN_LEN);
+            cpu_pc = cpu_pc + rel26_sig_ext(rel26);
             goto flush_pc;
             
           case INS32_OP_jmpsl:
-            cpu_pc = cpu_pc + ((phy_addr_t)rel26 << INSN_LEN);
-            cpu_regfile.r[ADDR_RLNK] = cpu_pc; /* link the returning address */
+            cpu_set_reg(ADDR_RLNK, cpu_pc + INSN_LEN); /* link the returning address */
+            cpu_pc = cpu_pc + rel26_sig_ext(rel26);
             goto flush_pc;
             
           case INS32_OP_bnct:
             if( csmr.psr.cf )
               {
-                cpu_pc = cpu_pc + ((phy_addr_t)rel26 << INSN_LEN);
+                cpu_pc = cpu_pc + rel26_sig_ext(rel26);
                 goto flush_pc;
               }
             break;
@@ -307,7 +355,7 @@ cpu_exec(void)
           case INS32_OP_bncf:
             if( !csmr.psr.cf )
               {
-                cpu_pc = cpu_pc + ((phy_addr_t)rel26 << INSN_LEN);
+                cpu_pc = cpu_pc + rel26_sig_ext(rel26);
                 goto flush_pc;
               }
             break;

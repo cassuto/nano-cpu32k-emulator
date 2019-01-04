@@ -9,6 +9,7 @@
 typedef int32_t cpu_word_t;
 typedef uint32_t cpu_unsigned_word_t;
 typedef uint32_t phy_addr_t;
+typedef uint32_t phy_signed_addr_t;
 typedef uint32_t insn_t;
 
 #define CHUNK_SIZE 8192
@@ -41,11 +42,18 @@ int cpu_exec(void);
 void cpu_raise_excp(int excp_no);
 
 /*
- * Memory.c
+ * memory.c
  */
 int memory_load_address_fp(FILE *fp, phy_addr_t baseaddr);
 
 extern char *cpu_memory;
+
+/*
+ * debug.c
+ */
+void debug_putc(uint8_t ch);
+
+#define DEBUG_CHAR_PORT 0xe0000000
 
 static inline uint8_t readm8(phy_addr_t addr)
 {
@@ -65,7 +73,10 @@ static inline uint32_t readm32(phy_addr_t addr)
 
 static inline void writem8(phy_addr_t addr, uint8_t val)
 {
-  cpu_memory[addr] = val;
+  if(addr == DEBUG_CHAR_PORT)
+    debug_putc(val);
+  else
+    cpu_memory[addr] = val;
 }
 static inline void writem16(phy_addr_t addr, uint16_t val)
 {

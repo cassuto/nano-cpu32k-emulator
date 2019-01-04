@@ -29,8 +29,7 @@
 #define INS32_SUBOP_lsl 3  // in opcodes.cc: line 248. 
 #define INS32_SUBOP_lsr 4  // in opcodes.cc: line 262. 
 #define INS32_SUBOP_asr 5  // in opcodes.cc: line 276. 
-#define INS32_SUBOP_mov 0  // in opcodes.cc: line 303. 
-#define INS32_SUBOP_cmov 1  // in opcodes.cc: line 317. 
+#define INS32_SUBOP_cmov 0  // in opcodes.cc: line 317. 
 #define INS32_SUBOP_jmp 0  // in opcodes.cc: line 345. 
 #define INS32_SUBOP_jmpl 1  // in opcodes.cc: line 359. 
 #define INS32_OP_add_i 10  // in opcodes.cc: line 380. 
@@ -80,9 +79,9 @@
 
 #define INS32_SHIFT_OPCODE   0
 #define INS32_SHIFT_RD       6
-#define INS32_SHIFT_RS1      5
-#define INS32_SHIFT_ALU_OPC  5
-#define INS32_SHIFT_RS2      6
+#define INS32_SHIFT_RS1      6+5
+#define INS32_SHIFT_ALU_OPC  6+5+5
+#define INS32_SHIFT_RS2      6+5+5+6
 #define INS32_SHIFT_SUB_OPC INS32_SHIFT_RD
 #define INS32_SHIFT_IMM16    16
 #define INS32_SHIFT_REL26    6
@@ -104,6 +103,7 @@
 #define VECT_EDALIGN        0x000000c0
 
 #define INSN_LEN            4
+#define INSN_LEN_SHIFT      2
 
 #define ADDR_RLNK           0x1d        /* LNK register */
 
