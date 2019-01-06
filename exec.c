@@ -36,7 +36,7 @@ cpu_set_reg(uint16_t addr, cpu_word_t val)
   }
   verbose_print("set %d <- %d\n", addr, val);
   cpu_regfile.r[addr] = val;
-  if(addr == 31) printf("sp(%x) ==%x\n", cpu_pc, val);
+  if(addr == 31) verbose_print("sp(%x) ==%x\n", cpu_pc, val);
 }
 
 static inline cpu_word_t
@@ -83,6 +83,9 @@ cpu_exec(void)
           verbose_print("PC=%#x\n", cpu_pc);
           //printf("PC=%#x\n", cpu_pc);
         }
+
+      if(cpu_pc==0x418)
+        verbose_print("va=%x\n", cpu_get_reg(1));
         
       switch( opcode )
         {
@@ -120,7 +123,7 @@ cpu_exec(void)
                 {
                   case INS32_SUBOP_mul:
                   case INS32_SUBOP_mul_u:
-                    cpu_set_reg(rd, cpu_get_reg(rs1) - cpu_get_reg(rs2));
+                    cpu_set_reg(rd, cpu_get_reg(rs1) * cpu_get_reg(rs2));
                     break;
                   case INS32_SUBOP_div:
                   case INS32_SUBOP_div_u:
@@ -186,7 +189,7 @@ cpu_exec(void)
               switch( aluopc )
                 {
                   case INS32_SUBOP_jmp:
-                    if(rs1 == ADDR_RLNK) { verbose_print("return %x\n", cpu_get_reg(rs1)); }
+                    if(rs1 == ADDR_RLNK) { verbose_print("return %x %x\n", cpu_pc, cpu_get_reg(rs1)); }
 
                     cpu_pc = cpu_get_reg(rs1);
                     goto flush_pc;
@@ -306,7 +309,7 @@ cpu_exec(void)
             {
               phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm16;
               cpu_set_reg(rd, (cpu_unsigned_word_t)readm32(addr));
-              printf("ld(%x) %d <- &%x(%d)\n", cpu_pc, rd, addr, (cpu_unsigned_word_t)readm32(addr) );
+              verbose_print("ld(%x) %d <- &%x(%d)\n", cpu_pc, rd, addr, (cpu_unsigned_word_t)readm32(addr) );
             }
             break;
           case INS32_OP_ldwa:
@@ -328,7 +331,7 @@ cpu_exec(void)
             {
               phy_addr_t addr = cpu_get_reg(rd) + (cpu_word_t)simm16;
               writem32(addr, (uint32_t)cpu_get_reg(rs1));
-              printf("stw(%x) %d(%d) -> &%x\n", cpu_pc, rs1, cpu_get_reg(rs1), addr );
+              verbose_print("stw(%x) %d(%d) -> &%x\n", cpu_pc, rs1, cpu_get_reg(rs1), addr );
             }
             break;
             
@@ -340,9 +343,13 @@ cpu_exec(void)
             goto flush_pc;
             
           case INS32_OP_jmpsl:
+            {
+            int oripc = cpu_pc + INSN_LEN;
             cpu_set_reg(ADDR_RLNK, cpu_pc + INSN_LEN); /* link the returning address */
             cpu_pc = cpu_pc + rel26_sig_ext(rel26);
+            verbose_print("call %x ret=%x, new=%x", oripc - INSN_LEN, oripc, cpu_pc);
             goto flush_pc;
+            }
             
           case INS32_OP_bnct:
             if( csmr.psr.cf )
@@ -358,6 +365,7 @@ cpu_exec(void)
                 cpu_pc = cpu_pc + rel26_sig_ext(rel26);
                 goto flush_pc;
               }
+
             break;
             
           case INS32_OP_resume:
