@@ -15,3 +15,4 @@ memory_load_address_fp(FILE *fp, phy_addr_t baseaddr)
     }
   return 0;
 }
+

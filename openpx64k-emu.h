@@ -37,9 +37,10 @@ struct csmr_s
 };
 
 int cpu_exec_init(int memory_size);
-void cpu_reset(void);
+void cpu_reset(phy_addr_t reset_vect);
 int cpu_exec(void);
 void cpu_raise_excp(int excp_no);
+void memory_breakpoint(phy_addr_t addr, uint32_t val);
 
 /*
  * memory.c
@@ -54,6 +55,7 @@ extern char *cpu_memory;
 void debug_putc(uint8_t ch);
 
 #define DEBUG_CHAR_PORT 0xe0000000
+#define DEBUG_NUM_PORT  0xe0000004
 
 static inline uint8_t readm8(phy_addr_t addr)
 {
@@ -85,10 +87,20 @@ static inline void writem16(phy_addr_t addr, uint16_t val)
 }
 static inline void writem32(phy_addr_t addr, uint32_t val)
 {
-  writem8(addr, val & 0xff);
-  writem8(addr + 1, (val >> 8) & 0xff);
-  writem8(addr + 2, (val >> 16) & 0xff);
-  writem8(addr + 3, val >> 24);
+  if(addr == DEBUG_NUM_PORT)
+    {
+      char buff[64], *p = buff;
+      snprintf(buff, sizeof(buff), "DEBUG NUM PORT - %#x\n", val);
+      while(*p)
+        debug_putc(*p++);
+    }
+  else
+    {
+      writem8(addr, val & 0xff);
+      writem8(addr + 1, (val >> 8) & 0xff);
+      writem8(addr + 2, (val >> 16) & 0xff);
+      writem8(addr + 3, val >> 24);
+    }
 }
 
 #endif

@@ -13,3 +13,4 @@ void debug_putc(uint8_t ch)
       fflush(stdout);
     }
 }
+
