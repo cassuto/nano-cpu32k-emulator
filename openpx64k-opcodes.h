@@ -2,36 +2,29 @@
 #define OPENPX64K_OPCODES_H
 
 
-#define INS32_COND_NO 0
-#define INS32_COND_EQ 1
-#define INS32_COND_NE 2
-#define INS32_COND_GE 3
-#define INS32_COND_GT 4
-#define INS32_COND_LE 5
-#define INS32_COND_LT 6
 #define INS32_OP_GRPSI 1  // in opcodes.cc: line 45. GRPSI
 #define INS32_OP_GRPMI 2  // in opcodes.cc: line 128. GRPMI
 #define INS32_OP_GRPL 3  // in opcodes.cc: line 196. GRPL
 #define INS32_OP_GRPT 4  // in opcodes.cc: line 294. GRPT
 #define INS32_OP_GRPJ 5  // in opcodes.cc: line 336. GRPJ
-#define INS32_SUBOP_add 0  // in opcodes.cc: line 54. 
-#define INS32_SUBOP_sub 1  // in opcodes.cc: line 68. 
-#define INS32_SUBOP_cmpeq 2  // in opcodes.cc: line 83. 
-#define INS32_SUBOP_cmpgt 3  // in opcodes.cc: line 97. 
-#define INS32_SUBOP_cmpgt_u 4  // in opcodes.cc: line 111. 
-#define INS32_SUBOP_mul 0  // in opcodes.cc: line 137. 
-#define INS32_SUBOP_mul_u 1  // in opcodes.cc: line 151. 
-#define INS32_SUBOP_div 2  // in opcodes.cc: line 165. 
-#define INS32_SUBOP_div_u 3  // in opcodes.cc: line 179. 
-#define INS32_SUBOP_and 0  // in opcodes.cc: line 205. 
-#define INS32_SUBOP_or 1  // in opcodes.cc: line 219. 
-#define INS32_SUBOP_xor 2  // in opcodes.cc: line 233. 
-#define INS32_SUBOP_lsl 3  // in opcodes.cc: line 248. 
-#define INS32_SUBOP_lsr 4  // in opcodes.cc: line 262. 
-#define INS32_SUBOP_asr 5  // in opcodes.cc: line 276. 
-#define INS32_SUBOP_cmov 0  // in opcodes.cc: line 317. 
-#define INS32_SUBOP_jmp 0  // in opcodes.cc: line 345. 
-#define INS32_SUBOP_jmpl 1  // in opcodes.cc: line 359. 
+#define INS32_SUBOP_add 1  // in opcodes.cc: line 54. 
+#define INS32_SUBOP_sub 2  // in opcodes.cc: line 68. 
+#define INS32_SUBOP_cmpeq 3  // in opcodes.cc: line 83. 
+#define INS32_SUBOP_cmpgt 4  // in opcodes.cc: line 97. 
+#define INS32_SUBOP_cmpgt_u 5  // in opcodes.cc: line 111. 
+#define INS32_SUBOP_mul 1  // in opcodes.cc: line 137. 
+#define INS32_SUBOP_mul_u 2  // in opcodes.cc: line 151. 
+#define INS32_SUBOP_div 3  // in opcodes.cc: line 165. 
+#define INS32_SUBOP_div_u 4  // in opcodes.cc: line 179. 
+#define INS32_SUBOP_and 1  // in opcodes.cc: line 205. 
+#define INS32_SUBOP_or 2  // in opcodes.cc: line 219. 
+#define INS32_SUBOP_xor 3  // in opcodes.cc: line 233. 
+#define INS32_SUBOP_lsl 4  // in opcodes.cc: line 248. 
+#define INS32_SUBOP_lsr 5  // in opcodes.cc: line 262. 
+#define INS32_SUBOP_asr 6  // in opcodes.cc: line 276. 
+#define INS32_SUBOP_cmov 1  // in opcodes.cc: line 317. 
+#define INS32_SUBOP_jmp 1  // in opcodes.cc: line 345. 
+#define INS32_SUBOP_jmpl 2  // in opcodes.cc: line 359. 
 #define INS32_OP_add_i 10  // in opcodes.cc: line 380. 
 #define INS32_OP_and_i 11  // in opcodes.cc: line 393. 
 #define INS32_OP_or_i 12  // in opcodes.cc: line 406. 

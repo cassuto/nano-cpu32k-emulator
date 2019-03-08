@@ -126,17 +126,17 @@
    (r29 29)
    (r30 30)
    (r31 31)
-   (va0 1)
-   (va1 2)
-   (va2 3)
-   (va3 4)
-   (va4 5)
-   (va5 6)
-   (rv  7)
-   (rvh 8)
-   (lnk 29)
-   (fp 30)
-   (sp 31))
+   (lnk 1)
+   (sp 2)
+   (fp 3)
+   (va0 4)
+   (va1 5)
+   (va2 6)
+   (va3 7)
+   (va4 8)
+   (va5 9)
+   (rv 10)
+   (rvh 11))
   )
 
 ;
@@ -441,7 +441,7 @@
     (dnf f-sub-alu-opc "<sub-alu-opc>" () 10 5)
     (dnf f-uimm16   "<uimm16>"  () 31 16)
     (df  f-simm16   "<simm16>"  (SIGN-OPT) 31 16 INT #f #f)
-
+    
     ; <address> PC relative, 26-bit
     (df f-rel26
         "rel26"
@@ -518,11 +518,11 @@
       OPC_GRPSI_
       f-alu-opc
         (
-         ("ADD"             #x00)
-         ("SUB"             #x01)
-         ("CMPEQ"           #x02)
-         ("CMPGT"           #x03)
-         ("CMPGT.U"         #x04)
+         ("ADD"             #x01)
+         ("SUB"             #x02)
+         ("CMPEQ"           #x03)
+         ("CMPGT"           #x04)
+         ("CMPGT.U"         #x05)
         )
     )
     
@@ -531,10 +531,10 @@
       OPC_GRPMI_
       f-alu-opc
         (
-         ("MUL"             #x00)
-         ("MUL.U"           #x01)
-         ("DIV"             #x02)
-         ("DIV.U"           #x03)
+         ("MUL"             #x01)
+         ("MUL.U"           #x02)
+         ("DIV"             #x03)
+         ("DIV.U"           #x04)
         )
     )
     
@@ -543,12 +543,12 @@
       OPC_GRPL_
       f-alu-opc
         (
-         ("AND"             #x00)
-         ("OR"              #x01)
-         ("XOR"             #x02)
-         ("LSL"             #x03)
-         ("LSR"             #x04)
-         ("ASR"             #x05)
+         ("AND"             #x01)
+         ("OR"              #x02)
+         ("XOR"             #x03)
+         ("LSL"             #x04)
+         ("LSR"             #x05)
+         ("ASR"             #x06)
         )
     )
 
@@ -570,7 +570,6 @@
       OPC_GRPT_
       f-alu-opc
         (
-         ("MOV"             #x00)
          ("CMOV"            #x01)
         )
     )
@@ -580,8 +579,8 @@
       OPC_GRPJ_
       f-alu-opc
       (
-       ("JMP"               #x00)
-       ("JMPL"              #x01)
+       ("JMP"               #x01)
+       ("JMPL"              #x02)
       )
     )
 
@@ -781,7 +780,7 @@
       (.str "mov reg/reg")
       ()
       (.str "mov $rd,$rs1")
-      (+ OPC_GRPT rd rs1 (f-res-rs2 0) OPC_GRPT_MOV (f-res-31-5 0) )
+      (+ OPC_GRPL rd rs1 (f-res-rs2 0) OPC_GRPL_OR (f-res-31-5 0) )
       (set rd rs1)
       ()
     )
@@ -968,10 +967,10 @@
     ;***************************************************************************
 
     (dni mov.i
-      (.str "mov reg/uimm16")
+      (.str "mov reg/simm16")
       ()
-      (.str "mov $rd,$uimm16")
-      (+ OPC_OR.I rd (f-res-rs1 0) uimm16)
+      (.str "mov $rd,$simm16")
+      (+ OPC_ADD.I rd (f-res-rs1 0) simm16)
       (set rd rs1)
       ()
     )
@@ -1006,7 +1005,7 @@
     ;***************************************************************************
 
     (define-pmacro (cti-link-return)
-      (set IAI (reg h-gpr 29) (add pc 8))
+      (set IAI (reg h-gpr 1) (add pc 8))
       )
     (define-pmacro (cti-transfer-control condition target)
       (sequence ()
