@@ -1,5 +1,5 @@
-#ifndef OPENPX64K_EMU_H
-#define OPENPX64K_EMU_H
+#ifndef NCPU32K_EMU_H
+#define NCPU32K_EMU_H
 
 #include <stdio.h>
 #include <stdlib.h>

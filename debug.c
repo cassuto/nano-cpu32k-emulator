@@ -1,5 +1,5 @@
 
-#include "openpx64k-emu.h"
+#include "ncpu32k-emu.h"
 #include <stdio.h>
 
 

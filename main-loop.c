@@ -1,6 +1,6 @@
 
-#include "openpx64k-emu.h"
-#include "openpx64k-opcodes.h"
+#include "ncpu32k-emu.h"
+#include "ncpu32k-opcodes.h"
 
 static int memory_size = 32 * 1024 * 1024;
 
@@ -14,7 +14,7 @@ report_error(const char *func, int rc)
 static int
 usage(const char *program)
 {
-  fprintf(stderr, "OpenPX-64k emulator\n\t%s. [ram_image_file] [-r [(hex) reset_vector]]\n", program);
+  fprintf(stderr, "ncpu32k emulator\n\t%s. [ram_image_file] [-r [(hex) reset_vector]]\n", program);
   return 1;
 }
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
       perror("Open file");
       return 1;
     }
-
+  
   if( (rc = cpu_exec_init(memory_size)) )
     return report_error("cpu_exec_init()", rc);
 
