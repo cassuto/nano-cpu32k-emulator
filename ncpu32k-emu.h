@@ -11,6 +11,7 @@ typedef uint32_t cpu_unsigned_word_t;
 typedef uint32_t phy_addr_t;
 typedef uint32_t phy_signed_addr_t;
 typedef uint32_t insn_t;
+typedef uint16_t msr_index_t;
 
 #define CHUNK_SIZE 8192
 
@@ -26,16 +27,22 @@ struct regfile_s
   cpu_word_t r[32];
 };
 
+
+/*
+ * msr.c
+ */
 struct psr_s
 {
-  char cf;
+  char cc;
 };
 
-struct csmr_s
+struct msr_s
 {
   struct psr_s psr;
 };
-
+void wmsr(msr_index_t index, cpu_word_t val);
+cpu_word_t rmsr(msr_index_t index);
+ 
 int cpu_exec_init(int memory_size);
 void cpu_reset(phy_addr_t reset_vect);
 int cpu_exec(void);
@@ -75,10 +82,7 @@ static inline uint32_t readm32(phy_addr_t addr)
 
 static inline void writem8(phy_addr_t addr, uint8_t val)
 {
-  if(addr == DEBUG_CHAR_PORT)
-    debug_putc(val);
-  else
-    cpu_memory[addr] = val;
+  cpu_memory[addr] = val;
 }
 static inline void writem16(phy_addr_t addr, uint16_t val)
 {
@@ -87,20 +91,10 @@ static inline void writem16(phy_addr_t addr, uint16_t val)
 }
 static inline void writem32(phy_addr_t addr, uint32_t val)
 {
-  if(addr == DEBUG_NUM_PORT)
-    {
-      char buff[64], *p = buff;
-      snprintf(buff, sizeof(buff), "DEBUG NUM PORT - %#x\n", val);
-      while(*p)
-        debug_putc(*p++);
-    }
-  else
-    {
-      writem8(addr, val & 0xff);
-      writem8(addr + 1, (val >> 8) & 0xff);
-      writem8(addr + 2, (val >> 16) & 0xff);
-      writem8(addr + 3, val >> 24);
-    }
+  writem8(addr, val & 0xff);
+  writem8(addr + 1, (val >> 8) & 0xff);
+  writem8(addr + 2, (val >> 16) & 0xff);
+  writem8(addr + 3, val >> 24);
 }
 
 #endif

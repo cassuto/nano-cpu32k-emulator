@@ -9,14 +9,14 @@
 /* #undef TRACE_CALL_STACK */
 //#define TRACE_STACK_POINTER
 /* #undef TRACE_STACK_POINTER */
-#define VERBOSE 1
+#define VERBOSE 0
 
 /*
  * Global data variables
  */
 static phy_addr_t cpu_pc = 0;
 static struct regfile_s cpu_regfile;
-static struct csmr_s csmr;
+static struct msr_s msr;
 #ifdef TRACE_CALL_STACK
 static int stack_depth = 0;
 #endif
@@ -46,7 +46,7 @@ cpu_reset(phy_addr_t reset_vect)
   cpu_pc = reset_vect;
 
   memset(&cpu_regfile.r, sizeof(cpu_regfile.r), 0);
-  memset(&csmr, sizeof csmr, 0);
+  memset(&msr, sizeof msr, 0);
 }
 
 /*
@@ -139,7 +139,7 @@ cpu_exec(void)
   phy_addr_t last_pc = 0;
   for(;;)
     {
-      printf("%X\n", cpu_pc);
+      //printf("%X\n", cpu_pc);
       insn_t current_ins = (insn_t)readm32(cpu_pc);
       uint16_t opcode = current_ins & INS32_MASK_OPCODE;
       
@@ -148,7 +148,7 @@ cpu_exec(void)
       uint16_t rd = INS32_GET_BITS(current_ins, RD);
       uint32_t uimm18 = INS32_GET_BITS(current_ins, IMM18);
       uint16_t uimm14 = INS32_GET_BITS(current_ins, IMM14);
-      int16_t simm14 = (int16_t)uimm14;
+      int16_t simm14 = (((int16_t)uimm14) ^ 0x2000) - 0x2000; /* sign extend */
       uint32_t rel20 = INS32_GET_BITS(current_ins, REL20);
       uint8_t attr = INS32_GET_BITS(current_ins, ATTR);
       
@@ -221,21 +221,18 @@ cpu_exec(void)
             
           case INS32_OP_CMP:
             {
-              if(cpu_pc=0x59C) {
-                printf("cmp %d: r%d=%d r%d=%d\n", attr, rs1,cpu_get_reg(rs1), rs2,cpu_get_reg(rs2));
-              }
               switch(attr)
                 {
                   case INS32_ATTR_CMPEQ:
-                    csmr.psr.cf = ( cpu_get_reg(rs1) == cpu_get_reg(rs2) );
+                    msr.psr.cc = ( cpu_get_reg(rs1) == cpu_get_reg(rs2) );
                     break;
                     
                   case INS32_ATTR_CMPGT:
-                    csmr.psr.cf = ( cpu_get_reg(rs1) > cpu_get_reg(rs2) );
+                    msr.psr.cc = ( cpu_get_reg(rs1) > cpu_get_reg(rs2) );
                     break;
                     
                   case INS32_ATTR_CMPGTU:
-                    csmr.psr.cf = ( (cpu_unsigned_word_t)cpu_get_reg(rs1) > (cpu_unsigned_word_t)cpu_get_reg(rs2) );
+                    msr.psr.cc = ( (cpu_unsigned_word_t)cpu_get_reg(rs1) > (cpu_unsigned_word_t)cpu_get_reg(rs2) );
                     break;
                   default:
                     cpu_raise_excp(VECT_EINSN);
@@ -245,7 +242,7 @@ cpu_exec(void)
             }
             
           case INS32_OP_BT:
-            if( csmr.psr.cf )
+            if( msr.psr.cc )
               {
                 cpu_pc = cpu_pc + rel20_sig_ext(rel20);
                 goto flush_pc;
@@ -253,7 +250,7 @@ cpu_exec(void)
             break;
             
           case INS32_OP_BF:
-            if( !csmr.psr.cf )
+            if( !msr.psr.cc )
               {
                 cpu_pc = cpu_pc + rel20_sig_ext(rel20);
                 goto flush_pc;
@@ -290,9 +287,11 @@ cpu_exec(void)
           case INS32_OP_RET:
             break;
             
-          case INS32_OP_WSMR:
+          case INS32_OP_WMSR:
+            wmsr(cpu_get_reg(rd) | uimm14, cpu_get_reg(rs1));
             break;
-          case INS32_OP_RSMR:
+          case INS32_OP_RMSR:
+            cpu_set_reg(rd, rmsr(cpu_get_reg(rs1) | uimm14));
             break;
             
           case INS32_OP_VENTER:

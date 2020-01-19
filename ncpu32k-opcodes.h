@@ -21,8 +21,8 @@
 #define INS32_OP_BARR   0x11
 #define INS32_OP_RAISE  0x12
 #define INS32_OP_RET    0x13
-#define INS32_OP_WSMR   0x14
-#define INS32_OP_RSMR   0x15
+#define INS32_OP_WMSR   0x14
+#define INS32_OP_RMSR   0x15
 #define INS32_OP_VENTER 0x16
 #define INS32_OP_VLEAVE 0x17
 
