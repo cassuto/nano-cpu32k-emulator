@@ -1,6 +1,6 @@
 
-#include "ncpu32k-emu.h"
-#include "ncpu32k-opcodes.h"
+#include "cpu.h"
+#include "ncpu32k-exceptions.h"
 
 static int memory_size = 32 * 1024 * 1024;
 

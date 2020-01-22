@@ -1,11 +1,12 @@
 
-#include "ncpu32k-emu.h"
+#include "cpu.h"
 #include "ncpu32k-msr.h"
 
 void wmsr(msr_index_t index, cpu_word_t val)
 {
   switch(index)
   {
+    /* MSR bank - DBGR */
     case MSR_DBGR_NUMPORT:
       {
         char buff[64], *p = buff;
@@ -19,7 +20,6 @@ void wmsr(msr_index_t index, cpu_word_t val)
       debug_putc(val);
       break;
   }
-    
 }
 
 cpu_word_t rmsr(msr_index_t index)

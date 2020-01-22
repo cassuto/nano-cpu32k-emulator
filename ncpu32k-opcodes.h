@@ -19,7 +19,7 @@
 #define INS32_OP_LDWU   0xf
 #define INS32_OP_STW    0x10
 #define INS32_OP_BARR   0x11
-#define INS32_OP_RAISE  0x12
+#define INS32_OP_SYSCALL 0x12
 #define INS32_OP_RET    0x13
 #define INS32_OP_WMSR   0x14
 #define INS32_OP_RMSR   0x15
@@ -69,14 +69,10 @@
 
 #define INS32_GET_BITS(src, opc) ((uint32_t)(src & INS32_MASK_ ## opc) >> (INS32_SHIFT_ ## opc))
 
-#define VECT_ERST           0x00000000
-#define VECT_EINSN          0x00000020
-
-
 #define INSN_LEN            4
 #define INSN_LEN_SHIFT      2
 
-#define ADDR_RLNK           1        /* LNK register */
+#define ADDR_RLNK           1
 #define ADDR_SP             2
 
-#endif
+#endif /* NCPU32K_OPCODES_H */

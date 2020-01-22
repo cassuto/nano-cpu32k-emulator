@@ -1,5 +1,5 @@
 
-#include "ncpu32k-emu.h"
+#include "cpu.h"
 #include <stdio.h>
 
 

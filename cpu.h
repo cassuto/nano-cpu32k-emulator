@@ -1,5 +1,5 @@
-#ifndef NCPU32K_EMU_H
-#define NCPU32K_EMU_H
+#ifndef NCPU32K_CPU_H
+#define NCPU32K_CPU_H
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,6 +1,7 @@
 
-#include "ncpu32k-emu.h"
+#include "cpu.h"
 #include "ncpu32k-opcodes.h"
+#include "ncpu32k-exceptions.h"
 
 /*
  * Configurations
@@ -280,7 +281,7 @@ cpu_exec(void)
           case INS32_OP_BARR:
             break;
           
-          case INS32_OP_RAISE:
+          case INS32_OP_SYSCALL:
             cpu_raise_excp(uimm14);
             break;
             
