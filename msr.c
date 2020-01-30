@@ -120,4 +120,6 @@ void init_msr()
 {
   memset(&msr, 0, sizeof msr);
   msr.PSR.RM = 1;
+  
+  printf("%#x\n", rmsr(MSR_CPUID));
 }

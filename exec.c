@@ -46,8 +46,9 @@ cpu_reset(phy_addr_t reset_vect)
 {
   cpu_pc = reset_vect;
 
-  memset(&cpu_regfile.r, sizeof(cpu_regfile.r), 0);
-  memset(&msr, sizeof msr, 0);
+  memset(&cpu_regfile.r, 0, sizeof(cpu_regfile.r));
+  memset(&msr, 0, sizeof msr);
+  init_msr();
 }
 
 /*
