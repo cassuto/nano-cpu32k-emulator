@@ -18,6 +18,7 @@ typedef uint16_t msr_index_t;
 #define EM_SUCCEEDED 0
 #define EM_FAULT 1
 #define EM_NO_MEMORY 2
+#define EM_RAISE_EXCEPTION 3
 
 /*
  * exec.c
@@ -26,28 +27,38 @@ struct regfile_s
 {
   cpu_word_t r[32];
 };
-
+extern phy_addr_t cpu_pc;
+extern struct msr_s msr;
+int cpu_exec_init(int memory_size);
+void cpu_reset(phy_addr_t reset_vect);
+int cpu_exec(void);
+void cpu_raise_exception(int excp_no, phy_addr_t lsa);
+void memory_breakpoint(phy_addr_t addr, uint32_t val);
 
 /*
  * msr.c
  */
 struct psr_s
 {
-  char cc;
+  char CC;
+  char CY;
+  char OV;
+  char OE;
+  char RM;
+  char IRE;
+  char IMME;
+  char DMME;
+  char ICAE;
+  char DCAE;
 };
 
 struct msr_s
 {
-  struct psr_s psr;
+  struct psr_s PSR;
 };
+void init_msr();
 void wmsr(msr_index_t index, cpu_word_t val);
 cpu_word_t rmsr(msr_index_t index);
- 
-int cpu_exec_init(int memory_size);
-void cpu_reset(phy_addr_t reset_vect);
-int cpu_exec(void);
-void cpu_raise_excp(int excp_no);
-void memory_breakpoint(phy_addr_t addr, uint32_t val);
 
 /*
  * memory.c
@@ -96,5 +107,7 @@ static inline void writem32(phy_addr_t addr, uint32_t val)
   writem8(addr + 2, (val >> 16) & 0xff);
   writem8(addr + 3, val >> 24);
 }
+
+#define panic(rc) exit(rc);
 
 #endif

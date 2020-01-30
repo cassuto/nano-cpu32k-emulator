@@ -15,12 +15,12 @@
 /*
  * Global data variables
  */
-static phy_addr_t cpu_pc = 0;
+phy_addr_t cpu_pc = 0;
 static struct regfile_s cpu_regfile;
-static struct msr_s msr;
 #ifdef TRACE_CALL_STACK
 static int stack_depth = 0;
 #endif
+struct msr_s msr;
 
 #if VERBOSE > 1
 #define verbose_print(...) printf(__VA_ARGS__)
@@ -100,7 +100,7 @@ cpu_set_reg(uint16_t addr, cpu_word_t val)
   if(addr >= 32)
   {
     fprintf(stderr, "cpu_set_reg() invalid register index at PC=%#x\n", cpu_pc);
-    exit(1);
+    panic(1);
   }
   if(addr)
     cpu_regfile.r[addr] = val;
@@ -115,7 +115,7 @@ cpu_get_reg(uint16_t addr)
   if(addr >= 32)
   {
     fprintf(stderr, "cpu_get_reg() invalid register index at PC=%#x, index=%#x\n", cpu_pc, addr);
-    exit(1);
+    panic(1);
   }
   if(addr)
     return cpu_regfile.r[addr];
@@ -124,14 +124,9 @@ cpu_get_reg(uint16_t addr)
 }
 
 static inline phy_signed_addr_t
-rel20_sig_ext(uint32_t rel20)
+rel26_sig_ext(uint32_t rel26)
 {
-  if(rel20 & (1 << 19))
-  {
-    return 0xfff00000 | (rel20 <<= INSN_LEN_SHIFT);
-  }
-  else
-    return rel20 << INSN_LEN_SHIFT;
+  return (((int32_t)(rel26<<INSN_LEN_SHIFT) ^ 0x8000000) - 0x8000000);
 }
 
 int
@@ -150,7 +145,7 @@ cpu_exec(void)
       uint32_t uimm18 = INS32_GET_BITS(current_ins, IMM18);
       uint16_t uimm14 = INS32_GET_BITS(current_ins, IMM14);
       int16_t simm14 = (((int16_t)uimm14) ^ 0x2000) - 0x2000; /* sign extend */
-      uint32_t rel20 = INS32_GET_BITS(current_ins, REL20);
+      uint32_t rel26 = INS32_GET_BITS(current_ins, REL26);
       uint8_t attr = INS32_GET_BITS(current_ins, ATTR);
       
       if(cpu_pc == 0)
@@ -211,9 +206,18 @@ cpu_exec(void)
           
           case INS32_OP_JMP_I:
             {
+              cpu_pc = cpu_pc + rel26_sig_ext(rel26);
+#ifdef TRACE_CALL_STACK
               phy_addr_t lnkpc = cpu_pc + INSN_LEN;
-              cpu_set_reg(rd, lnkpc); /* link the returning address */
-              cpu_pc = cpu_pc + rel20_sig_ext(rel20);
+              trace_call_stack_jmp(lnkpc - INSN_LEN, lnkpc, cpu_pc);
+#endif
+              goto flush_pc;
+            }
+          case INS32_OP_JMP_I_LNK:
+            {
+              phy_addr_t lnkpc = cpu_pc + INSN_LEN;
+              cpu_set_reg(ADDR_RLNK, lnkpc); /* link the returning address */
+              cpu_pc = cpu_pc + rel26_sig_ext(rel26);
 #ifdef TRACE_CALL_STACK
               trace_call_stack_jmp(lnkpc - INSN_LEN, lnkpc, cpu_pc);
 #endif
@@ -225,35 +229,35 @@ cpu_exec(void)
               switch(attr)
                 {
                   case INS32_ATTR_CMPEQ:
-                    msr.psr.cc = ( cpu_get_reg(rs1) == cpu_get_reg(rs2) );
+                    msr.PSR.CC = ( cpu_get_reg(rs1) == cpu_get_reg(rs2) );
                     break;
                     
                   case INS32_ATTR_CMPGT:
-                    msr.psr.cc = ( cpu_get_reg(rs1) > cpu_get_reg(rs2) );
+                    msr.PSR.CC = ( cpu_get_reg(rs1) > cpu_get_reg(rs2) );
                     break;
                     
                   case INS32_ATTR_CMPGTU:
-                    msr.psr.cc = ( (cpu_unsigned_word_t)cpu_get_reg(rs1) > (cpu_unsigned_word_t)cpu_get_reg(rs2) );
+                    msr.PSR.CC = ( (cpu_unsigned_word_t)cpu_get_reg(rs1) > (cpu_unsigned_word_t)cpu_get_reg(rs2) );
                     break;
                   default:
-                    cpu_raise_excp(VECT_EINSN);
+                    cpu_raise_exception(VECT_EINSN, 0);
                     break;
                 }
               break;
             }
             
           case INS32_OP_BT:
-            if( msr.psr.cc )
+            if( msr.PSR.CC )
               {
-                cpu_pc = cpu_pc + rel20_sig_ext(rel20);
+                cpu_pc = cpu_pc + rel26_sig_ext(rel26);
                 goto flush_pc;
               }
             break;
             
           case INS32_OP_BF:
-            if( !msr.psr.cc )
+            if( !msr.PSR.CC )
               {
-                cpu_pc = cpu_pc + rel20_sig_ext(rel20);
+                cpu_pc = cpu_pc + rel26_sig_ext(rel26);
                 goto flush_pc;
               }
             break;
@@ -282,7 +286,7 @@ cpu_exec(void)
             break;
           
           case INS32_OP_SYSCALL:
-            cpu_raise_excp(uimm14);
+            cpu_raise_exception(uimm14, 0);
             break;
             
           case INS32_OP_RET:
@@ -375,7 +379,7 @@ cpu_exec(void)
             break;
             
           default:
-            cpu_raise_excp(VECT_EINSN);
+            cpu_raise_exception(VECT_EINSN, 0);
         }
       
       cpu_pc += INSN_LEN;
@@ -385,7 +389,7 @@ flush_pc:
 }
 
 void
-cpu_raise_excp(int excp_no)
+cpu_raise_exception(int excp_no, phy_addr_t lsa)
 {
   printf("excp %d at PC=0x%X\n", excp_no, cpu_pc);
 }

@@ -25,6 +25,7 @@
 #define INS32_OP_RMSR   0x15
 #define INS32_OP_VENTER 0x16
 #define INS32_OP_VLEAVE 0x17
+#define INS32_OP_JMP_I_LNK 0x18
 
 #define INS32_OP_ASR    0x1a
 #define INS32_OP_ASR_I  0x1b
@@ -55,7 +56,7 @@
 #define INS32_MASK_RS2      0x00fc0000
 #define INS32_MASK_IMM14    0xfffc0000
 #define INS32_MASK_IMM18    0x3ffff000
-#define INS32_MASK_REL20    0xfffff000
+#define INS32_MASK_REL26    0xffffffc0
 #define INS32_MASK_ATTR     0xff000000
 
 #define INS32_SHIFT_OPCODE   0
@@ -64,7 +65,7 @@
 #define INS32_SHIFT_RS2      6+6+6
 #define INS32_SHIFT_IMM14    6+6+6
 #define INS32_SHIFT_IMM18    6+6
-#define INS32_SHIFT_REL20    6+6
+#define INS32_SHIFT_REL26    6
 #define INS32_SHIFT_ATTR     6+6+6+6
 
 #define INS32_GET_BITS(src, opc) ((uint32_t)(src & INS32_MASK_ ## opc) >> (INS32_SHIFT_ ## opc))
