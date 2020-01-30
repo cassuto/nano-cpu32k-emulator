@@ -241,7 +241,7 @@ cpu_exec(void)
                     msr.PSR.CC = ( (cpu_unsigned_word_t)cpu_get_reg(rs1) > (cpu_unsigned_word_t)cpu_get_reg(rs2) );
                     break;
                   default:
-                    cpu_raise_exception(VECT_EINSN, 0);
+                    cpu_raise_exception(VECT_EINSN, 0, 0);
                     break;
                 }
               break;
@@ -287,11 +287,14 @@ cpu_exec(void)
             break;
           
           case INS32_OP_SYSCALL:
-            cpu_raise_exception(uimm14, 0);
+            cpu_raise_exception(VECT_ESYSCALL, 0, /*syscall*/1);
             break;
             
           case INS32_OP_RET:
-            break;
+            /* restore PSR and PC */
+            msr.PSR = msr.EPSR;
+            cpu_pc = msr.EPC;
+            goto flush_pc;
             
           case INS32_OP_WMSR:
             wmsr(cpu_get_reg(rd) | uimm14, cpu_get_reg(rs1));
@@ -380,7 +383,7 @@ cpu_exec(void)
             break;
             
           default:
-            cpu_raise_exception(VECT_EINSN, 0);
+            cpu_raise_exception(VECT_EINSN, 0, 0);
         }
       
       cpu_pc += INSN_LEN;
@@ -389,8 +392,20 @@ flush_pc:
     }
 }
 
+/* no needed to flush_pc after raised an exception */
 void
-cpu_raise_exception(int excp_no, phy_addr_t lsa)
+cpu_raise_exception(phy_addr_t vector, phy_addr_t lsa, char syscall)
 {
-  printf("excp %d at PC=0x%X\n", excp_no, cpu_pc);
+  msr.EPC = cpu_pc + (syscall ? INSN_LEN : 0);
+  msr.ELSA = lsa;
+  /* save old PSR */
+  msr.EPSR = msr.PSR;
+  /* set up new PSR for exception */
+  msr.PSR.RM = 1;
+  msr.PSR.IMME = 0;
+  msr.PSR.DMME = 0;
+  msr.PSR.IRE = 0;
+  /* transfer to exception handler */
+  /* -INSN_LEN will be eliminated by insn fetch in cpu_exec() */
+  cpu_pc = (phy_signed_addr_t)vector -INSN_LEN;
 }

@@ -32,7 +32,7 @@ extern struct msr_s msr;
 int cpu_exec_init(int memory_size);
 void cpu_reset(phy_addr_t reset_vect);
 int cpu_exec(void);
-void cpu_raise_exception(int excp_no, phy_addr_t lsa);
+void cpu_raise_exception(phy_addr_t vector, phy_addr_t lsa, char syscall);
 void memory_breakpoint(phy_addr_t addr, uint32_t val);
 
 /*
@@ -55,6 +55,9 @@ struct psr_s
 struct msr_s
 {
   struct psr_s PSR;
+  struct psr_s EPSR;
+  phy_addr_t EPC;
+  phy_addr_t ELSA;
 };
 void init_msr();
 void wmsr(msr_index_t index, cpu_word_t val);

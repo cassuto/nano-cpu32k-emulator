@@ -20,6 +20,8 @@ static char enable_tsc = 1;
           do { msr.reg.field = (val & MSR_ ## reg ## _ ## bit) >> MSR_ ## reg ## _ ## bit ## _SHIFT; } while(0)
 #define msr_pack_bit(reg, bit) \
           (normalize_bit(msr.reg.bit) << MSR_ ## reg ## _ ## bit ## _SHIFT);
+#define msr_pack_bit_dup(reg2,reg, bit) \
+          (normalize_bit(msr.reg2.bit) << MSR_ ## reg ## _ ## bit ## _SHIFT);
 #define msr_pack_field(reg, field) \
           ((msr.reg.field << MSR_ ## reg ## _ ## field ## _SHIFT) & MSR_ ## reg ## _ ## field);
 #define val_pack_bit(reg, bit, val) \
@@ -52,10 +54,6 @@ void wmsr(msr_index_t index, cpu_word_t val)
         }
       else
         warn_illegal_access_reg("MSR.PSR");
-      break;
-      
-    case MSR_CPUID:
-      /* read-only */
       break;
 
     /* MSR bank - DBG */
@@ -109,17 +107,37 @@ cpu_word_t rmsr(msr_index_t index)
       ret |= val_pack_bit(CPUID, FFPU, enable_fpu);
       ret |= val_pack_bit(CPUID, FTSC, enable_tsc);
       return ret;
+      
+    case MSR_EPSR:
+      ret |= msr_pack_bit_dup(EPSR, PSR, CC);
+      ret |= msr_pack_bit_dup(EPSR, PSR, CY);
+      ret |= msr_pack_bit_dup(EPSR, PSR, OV);
+      ret |= msr_pack_bit_dup(EPSR, PSR, OE);
+      ret |= msr_pack_bit_dup(EPSR, PSR, RM);
+      ret |= msr_pack_bit_dup(EPSR, PSR, IRE);
+      ret |= msr_pack_bit_dup(EPSR, PSR, IMME);
+      ret |= msr_pack_bit_dup(EPSR, PSR, DMME);
+      ret |= msr_pack_bit_dup(EPSR, PSR, ICAE);
+      ret |= msr_pack_bit_dup(EPSR, PSR, DCAE);
+      return ret;
+      
+    case MSR_EPC:
+      return msr.EPC;
+      
+    case MSR_ELSA:
+      return msr.ELSA;
+      
+    case MSR_COREID:
+      /* SMP is not supported yet, always return 0 */
+      return 0;
   }
   fprintf(stderr, "rmsr() invalid register index %#x at PC=%#x\n", index, cpu_pc);
   panic(1);
   return 0;
 }
 
-
 void init_msr()
 {
   memset(&msr, 0, sizeof msr);
   msr.PSR.RM = 1;
-  
-  printf("%#x\n", rmsr(MSR_CPUID));
 }
