@@ -6,16 +6,18 @@
 /*
  * Configurations
  */
-#define TRACE_CALL_STACK
+//#define TRACE_CALL_STACK
 /* #undef TRACE_CALL_STACK */
 //#define TRACE_STACK_POINTER
 /* #undef TRACE_STACK_POINTER */
-#define VERBOSE 0
+//#define TRACE_EXCEPTION
+/* #undef TRACE_EXCEPTION */
+#define VERBOSE 1
 
 /*
  * Global data variables
  */
-phy_addr_t cpu_pc = 0;
+vm_addr_t cpu_pc = 0;
 static struct regfile_s cpu_regfile;
 #ifdef TRACE_CALL_STACK
 static int stack_depth = 0;
@@ -42,7 +44,7 @@ cpu_exec_init(int memory_size)
 }
 
 void
-cpu_reset(phy_addr_t reset_vect)
+cpu_reset(vm_addr_t reset_vect)
 {
   cpu_pc = reset_vect;
 
@@ -56,13 +58,13 @@ cpu_reset(phy_addr_t reset_vect)
  */
 #ifdef TRACE_CALL_STACK
 static inline void
-trace_call_stack_jmp(phy_addr_t insn_pc, phy_addr_t lnk_pc, phy_addr_t new_pc)
+trace_call_stack_jmp(vm_addr_t insn_pc, vm_addr_t lnk_pc, vm_addr_t new_pc)
 {
   verbose_print_1("%d# (%#x): call %x, ret=%x\n", ++stack_depth, insn_pc, new_pc, lnk_pc);
 }
 
 static inline void
-trace_call_stack_return(phy_addr_t insn_pc, phy_addr_t new_pc)
+trace_call_stack_return(vm_addr_t insn_pc, vm_addr_t new_pc)
 {
   verbose_print_1("%d# (%#x): return to %x\n", --stack_depth, insn_pc, new_pc);
 }
@@ -70,26 +72,26 @@ trace_call_stack_return(phy_addr_t insn_pc, phy_addr_t new_pc)
 
 #ifdef TRACE_STACK_POINTER
 static inline void
-trace_stack_pointer_ld(phy_addr_t pc, phy_addr_t addr, cpu_word_t sp)
+trace_stack_pointer_ld(vm_addr_t pc, vm_addr_t addr, cpu_word_t sp)
 {
   verbose_print_1("(%#x): sp <- &%#x(%#x)\n", pc, addr, sp);
 }
 
 static inline void
-trace_stack_pointer_mov(phy_addr_t pc, cpu_word_t sp)
+trace_stack_pointer_mov(vm_addr_t pc, cpu_word_t sp)
 {
   verbose_print_1("(%#x): sp <- %#x\n", pc, sp);
 }
 
 static inline void
-trace_stack_pointer_st(phy_addr_t pc, phy_addr_t addr, cpu_word_t sp)
+trace_stack_pointer_st(vm_addr_t pc, vm_addr_t addr, cpu_word_t sp)
 {
   verbose_print_1("(%#x): %#x <- sp(%#x)\n", pc, addr, sp);
 }
 #endif
 
 void
-memory_breakpoint(phy_addr_t addr, uint32_t val)
+memory_breakpoint(vm_addr_t addr, uint32_t val)
 {
   verbose_print_1("memory BP (%#x): addr = %#x, val = %#x\n", cpu_pc, addr, val);
 }
@@ -124,7 +126,7 @@ cpu_get_reg(uint16_t addr)
     return 0;
 }
 
-static inline phy_signed_addr_t
+static inline vm_signed_addr_t
 rel26_sig_ext(uint32_t rel26)
 {
   return (((int32_t)(rel26<<INSN_LEN_SHIFT) ^ 0x8000000) - 0x8000000);
@@ -133,13 +135,16 @@ rel26_sig_ext(uint32_t rel26)
 int
 cpu_exec(void)
 {
-  phy_addr_t last_pc = 0;
   for(;;)
     {
-      //printf("%X\n", cpu_pc);
-      insn_t current_ins = (insn_t)readm32(cpu_pc);
-      uint16_t opcode = current_ins & INS32_MASK_OPCODE;
+      phy_addr_t insn_pa = 0;
+      if (immu_translate_vma(cpu_pc, &insn_pa) < 0)
+        {
+          goto handle_exception;
+        }
+      insn_t current_ins = (insn_t)phy_readm32(insn_pa);
       
+      uint16_t opcode = current_ins & INS32_MASK_OPCODE;
       uint16_t rs1 = INS32_GET_BITS(current_ins, RS1);
       uint16_t rs2 = INS32_GET_BITS(current_ins, RS2);
       uint16_t rd = INS32_GET_BITS(current_ins, RD);
@@ -148,11 +153,6 @@ cpu_exec(void)
       int16_t simm14 = (((int16_t)uimm14) ^ 0x2000) - 0x2000; /* sign extend */
       uint32_t rel26 = INS32_GET_BITS(current_ins, REL26);
       uint8_t attr = INS32_GET_BITS(current_ins, ATTR);
-      
-      if(cpu_pc == 0)
-        verbose_print("pc = %#x\n", last_pc);
-
-      last_pc = cpu_pc;
 
       switch( opcode )
         {
@@ -193,7 +193,7 @@ cpu_exec(void)
           
           case INS32_OP_JMP:
             {
-              phy_addr_t lnkpc = cpu_pc + INSN_LEN;
+              vm_addr_t lnkpc = cpu_pc + INSN_LEN;
               cpu_set_reg(rd, lnkpc); /* link the returning address */
               cpu_pc = cpu_get_reg(rs1);
 #ifdef TRACE_CALL_STACK
@@ -209,14 +209,14 @@ cpu_exec(void)
             {
               cpu_pc = cpu_pc + rel26_sig_ext(rel26);
 #ifdef TRACE_CALL_STACK
-              phy_addr_t lnkpc = cpu_pc + INSN_LEN;
+              vm_addr_t lnkpc = cpu_pc + INSN_LEN;
               trace_call_stack_jmp(lnkpc - INSN_LEN, lnkpc, cpu_pc);
 #endif
               goto flush_pc;
             }
           case INS32_OP_JMP_I_LNK:
             {
-              phy_addr_t lnkpc = cpu_pc + INSN_LEN;
+              vm_addr_t lnkpc = cpu_pc + INSN_LEN;
               cpu_set_reg(ADDR_RLNK, lnkpc); /* link the returning address */
               cpu_pc = cpu_pc + rel26_sig_ext(rel26);
 #ifdef TRACE_CALL_STACK
@@ -242,7 +242,7 @@ cpu_exec(void)
                     break;
                   default:
                     cpu_raise_exception(VECT_EINSN, 0, 0);
-                    break;
+                    goto handle_exception;
                 }
               break;
             }
@@ -265,21 +265,31 @@ cpu_exec(void)
             
           case INS32_OP_LDWU:
             {
-              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm14;
+              vm_addr_t va = cpu_get_reg(rs1) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 0) < 0)
+                {
+                  goto handle_exception;
+                }
 #ifdef TRACE_STACK_POINTER
-              if(rs1 == ADDR_SP) { trace_stack_pointer_ld(cpu_pc, addr, readm32(addr)); }
+              if(rs1 == ADDR_SP) { trace_stack_pointer_ld(cpu_pc, va, phy_readm32(pa)); }
 #endif
-              cpu_set_reg(rd, (cpu_unsigned_word_t)readm32(addr));
+              cpu_set_reg(rd, (cpu_unsigned_word_t)phy_readm32(pa));
             }
             break;
             
           case INS32_OP_STW:
             {
-              phy_addr_t addr = cpu_get_reg(rd) + (cpu_word_t)simm14;
+              vm_addr_t va = cpu_get_reg(rd) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 1) < 0)
+                {
+                  goto handle_exception;
+                }
 #ifdef TRACE_STACK_POINTER
-              if(rs1 == ADDR_SP) { trace_stack_pointer_st(cpu_pc, addr, cpu_get_reg(rd)); }
+              if(rs1 == ADDR_SP) { trace_stack_pointer_st(cpu_pc, va, cpu_get_reg(rd)); }
 #endif
-              writem32(addr, (uint32_t)cpu_get_reg(rs1));
+              phy_writem32(pa, (uint32_t)cpu_get_reg(rs1));
             }
             break;
             
@@ -288,7 +298,7 @@ cpu_exec(void)
           
           case INS32_OP_SYSCALL:
             cpu_raise_exception(VECT_ESYSCALL, 0, /*syscall*/1);
-            break;
+            goto handle_exception;
             
           case INS32_OP_RET:
             /* restore PSR and PC */
@@ -342,39 +352,69 @@ cpu_exec(void)
           
           case INS32_OP_LDB:
             {
-              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm14;
-              cpu_set_reg(rd, (cpu_word_t)readm8(addr));
+              vm_addr_t va = cpu_get_reg(rs1) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 0) < 0)
+                {
+                  goto handle_exception;
+                }
+              cpu_set_reg(rd, (cpu_word_t)phy_readm8(pa));
             }
             break;
           case INS32_OP_LDBU:
             {
-              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm14;
-              cpu_set_reg(rd, (cpu_unsigned_word_t)readm8(addr));
+              vm_addr_t va = cpu_get_reg(rs1) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 0) < 0)
+                {
+                  goto handle_exception;
+                }
+              cpu_set_reg(rd, (cpu_unsigned_word_t)phy_readm8(pa));
             }
             break;
           case INS32_OP_LDH:
             {
-              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm14;
-              cpu_set_reg(rd, (cpu_word_t)readm16(addr));
+              vm_addr_t va = cpu_get_reg(rs1) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 0) < 0)
+                {
+                  goto handle_exception;
+                }
+              cpu_set_reg(rd, (cpu_word_t)phy_readm16(pa));
             }
             break;
           case INS32_OP_LDHU:
             {
-              phy_addr_t addr = cpu_get_reg(rs1) + (cpu_word_t)simm14;
-              cpu_set_reg(rd, (cpu_unsigned_word_t)readm16(addr));
+              vm_addr_t va = cpu_get_reg(rs1) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 0) < 0)
+                {
+                  goto handle_exception;
+                }
+              cpu_set_reg(rd, (cpu_unsigned_word_t)phy_readm16(pa));
             }
             break;
             
           case INS32_OP_STB:
             {
-              phy_addr_t addr = cpu_get_reg(rd) + (cpu_word_t)simm14;
-              writem8(addr, (uint8_t)cpu_get_reg(rs1));
+              vm_addr_t va = cpu_get_reg(rd) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 1) < 0)
+                {
+                  goto handle_exception;
+                }
+              phy_writem8(pa, (uint8_t)cpu_get_reg(rs1));
             }
             break;
           case INS32_OP_STH:
             {
-              phy_addr_t addr = cpu_get_reg(rd) + (cpu_word_t)simm14;
-              writem16(addr, (uint16_t)cpu_get_reg(rs1));
+              vm_addr_t va = cpu_get_reg(rd) + (cpu_word_t)simm14;
+              phy_addr_t pa = 0;
+              if (dmmu_translate_vma(va, &pa, 1) < 0)
+                {
+                  goto handle_exception;
+                }
+              phy_writem16(pa, (uint16_t)cpu_get_reg(rs1));
             }
             break;
             
@@ -384,17 +424,19 @@ cpu_exec(void)
             
           default:
             cpu_raise_exception(VECT_EINSN, 0, 0);
+            goto handle_exception;
         }
       
+handle_exception:
       cpu_pc += INSN_LEN;
 flush_pc:
       (void)0;
     }
 }
 
-/* no needed to flush_pc after raised an exception */
+/* must goto handle_exception after raised an exception */
 void
-cpu_raise_exception(phy_addr_t vector, phy_addr_t lsa, char syscall)
+cpu_raise_exception(vm_addr_t vector, vm_addr_t lsa, char syscall)
 {
   msr.EPC = cpu_pc + (syscall ? INSN_LEN : 0);
   msr.ELSA = lsa;
@@ -407,5 +449,10 @@ cpu_raise_exception(phy_addr_t vector, phy_addr_t lsa, char syscall)
   msr.PSR.IRE = 0;
   /* transfer to exception handler */
   /* -INSN_LEN will be eliminated by insn fetch in cpu_exec() */
-  cpu_pc = (phy_signed_addr_t)vector -INSN_LEN;
+  cpu_pc = (vm_signed_addr_t)vector -INSN_LEN;
+  
+#ifdef TRACE_EXCEPTION
+  verbose_print_1("Raise Exception %X EPC=%x\n", vector, msr.EPC);
+  getchar();
+#endif
 }

@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   int rc, i;
   FILE *fp;
   const char *filename;
-  phy_addr_t reset_vector = VECT_ERST;
+  vm_addr_t reset_vector = VECT_ERST;
 
   if(argc < 2)
     return usage(argv[0]);
