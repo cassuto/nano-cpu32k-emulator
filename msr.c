@@ -105,6 +105,18 @@ void wmsr(msr_index_t index, cpu_word_t val)
           debug_putc(val);
           break;
           
+        /* MSR bank - TSC */
+        case MSR_TSR:
+          msr.TSR = val;
+          break;
+         
+        case MSR_TCR:
+          msr_unpack_field(TCR, CNT, val);
+          msr_unpack_bit(TCR, EN, val);
+          msr_unpack_bit(TCR, IE, val);
+          msr_unpack_bit(TCR, IR, val);
+          break;
+          
         default:
           {
             /* MSR bank - IMM */
@@ -227,6 +239,17 @@ cpu_word_t rmsr(msr_index_t index)
         /* MSR bank - DMM */
         case MSR_DMMID:
           ret = val_pack_field(DMMID, STLB, dmmu_tlb_count_log2);
+          return ret;
+          
+        /* MSR bank - TSC */
+        case MSR_TSR:
+          return msr.TSR;
+         
+        case MSR_TCR:
+          ret = msr_pack_field(TCR, CNT);
+          ret |= msr_pack_bit(TCR, EN);
+          ret |= msr_pack_bit(TCR, IE);
+          ret |= msr_pack_bit(TCR, IR);
           return ret;
           
         default:

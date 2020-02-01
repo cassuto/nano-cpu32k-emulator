@@ -137,6 +137,13 @@ cpu_exec(void)
 {
   for(;;)
     {
+      /* not a cycle-accuracy emulation for TSC */
+      if (tsc_clk() < 0)
+        {
+          goto handle_exception;
+        }
+      
+      /* fetch instruction */
       phy_addr_t insn_pa = 0;
       if (immu_translate_vma(cpu_pc, &insn_pa) < 0)
         {
@@ -144,6 +151,7 @@ cpu_exec(void)
         }
       insn_t current_ins = (insn_t)phy_readm32(insn_pa);
       
+      /* decode and execute */
       uint16_t opcode = current_ins & INS32_MASK_OPCODE;
       uint16_t rs1 = INS32_GET_BITS(current_ins, RS1);
       uint16_t rs2 = INS32_GET_BITS(current_ins, RS2);

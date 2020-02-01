@@ -70,7 +70,7 @@
 #define MSR_ELSA	(MSR_BANK_PS + 0x4)
 
 /* MSR.COREID R */
-#define MSR_COREID	(MSR_BANK_PS + 0x5)
+#define MSR_COREID	(MSR_BANK_PS + 0x6)
 
 
 /*********************************************************************
@@ -183,7 +183,18 @@
 * MSR bank - TSC
 **********************************************************************/
 
-/* MSR.TSC */
-#define MSR_TSC_TSR (MSR_BANK_TSC + 0x0)
+/* MSR.TSR R/W */
+#define MSR_TSR (MSR_BANK_TSC + 0x0)
+
+/* MSR.TCR R/W */
+#define MSR_TCR	(MSR_BANK_TSC + 0x1)
+#define MSR_TCR_CNT_SHIFT 0
+#define MSR_TCR_CNT	0x0fffffff
+#define MSR_TCR_EN_SHIFT 28
+#define MSR_TCR_EN	(1L << MSR_TCR_EN_SHIFT)
+#define MSR_TCR_IE_SHIFT 29
+#define MSR_TCR_IE	(1L << MSR_TCR_IE_SHIFT)
+#define MSR_TCR_IR_SHIFT 30
+#define MSR_TCR_IR	(1L << MSR_TCR_IR_SHIFT)
 
 #endif /* NCPU32K_MSR_H */

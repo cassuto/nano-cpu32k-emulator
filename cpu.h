@@ -25,6 +25,7 @@ typedef uint16_t msr_index_t;
 #define EM_NO_MEMORY 2
 #define EM_TLB_MISS 3
 #define EM_PAGE_FAULT 4
+#define EM_IRQ 5
 
 /*
  * exec.c
@@ -50,6 +51,11 @@ int immu_translate_vma(vm_addr_t va, phy_addr_t *pa);
  * d-mmu.c
  */
 int dmmu_translate_vma(vm_addr_t va, phy_addr_t *pa, char store_insn);
+
+/*
+ * tsc.c
+ */
+int tsc_clk();
 
 /*
  * msr.c
@@ -103,6 +109,15 @@ struct dtlbh_s
   char S;
   vm_addr_t PPN;
 };
+
+struct tcr_s
+{
+  uint32_t CNT;
+  char EN;
+  char IE;
+  char IR;
+};
+
 struct msr_s
 {
   struct psr_s PSR;
@@ -113,6 +128,8 @@ struct msr_s
   struct itlbh_s ITLBH[MAX_ITLB_COUNT];
   struct dtlbl_s DTLBL[MAX_DTLB_COUNT];
   struct dtlbh_s DTLBH[MAX_DTLB_COUNT];
+  cpu_unsigned_word_t TSR;
+  struct tcr_s TCR;
 };
 void init_msr();
 void wmsr(msr_index_t index, cpu_word_t val);
