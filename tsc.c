@@ -7,22 +7,26 @@
 
 /**
  * Emulate a clk edge of TSC.
- * @retval >= 0 No any exception.
- * @retval -EM_IRQ  Interrupt Request Exception.
+ * @retval >= 0 If not any exception.
  */
 int tsc_clk()
 {
-  int ret = 0;
-  if (msr.PSR.IRE && msr.TCR.IE &&
-      (msr.TCR.IR || (msr.TSR & CNT_MASK == msr.TCR.CNT)))
-    {
-      msr.TCR.IR = 1;
-      cpu_raise_exception(VECT_EIRQ, 0, 0);
-      ret = -EM_IRQ;
-    }
   if (msr.TCR.EN)
     {
+      if ((msr.TSR & CNT_MASK) == msr.TCR.CNT)
+        {
+          msr.TCR.P = 1;
+          tsc_update_tcr();
+        }
       ++msr.TSR;
     }
-  return ret;
+  return 0;
+}
+
+/**
+ * @brief Called when TCR is updated.
+ */
+void tsc_update_tcr()
+{
+  irqc_set_interrupt(IRQ_TSC, msr.TCR.P);
 }

@@ -13,7 +13,4 @@
 #define VECT_EALGIN         0x00000024
 #define VECT_EINT           0x00000028
 
-#define ERSC_DEFAULT		0X0
-#define ERSC_TSC_IRQ		0x1
-
 #endif /* NCPU32K_EXCEPTIONS_H */

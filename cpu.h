@@ -56,6 +56,16 @@ int dmmu_translate_vma(vm_addr_t va, phy_addr_t *pa, char store_insn);
  * tsc.c
  */
 int tsc_clk();
+void tsc_update_tcr();
+
+/*
+ * irqc.c
+ */
+void irqc_set_interrupt(int channel, char raise);
+int irqc_is_masked(int channel);
+int irqc_handle_irqs();
+
+#define IRQ_TSC 0
 
 /*
  * msr.c
@@ -114,8 +124,7 @@ struct tcr_s
 {
   uint32_t CNT;
   char EN;
-  char IE;
-  char IR;
+  char P;
 };
 
 struct msr_s
@@ -130,6 +139,8 @@ struct msr_s
   struct dtlbh_s DTLBH[MAX_DTLB_COUNT];
   cpu_unsigned_word_t TSR;
   struct tcr_s TCR;
+  cpu_unsigned_word_t IMR;
+  cpu_unsigned_word_t IRR;
 };
 void init_msr();
 void wmsr(msr_index_t index, cpu_word_t val);

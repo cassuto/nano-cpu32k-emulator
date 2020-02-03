@@ -14,6 +14,7 @@ static const char enable_dcache = 1;
 static const char enable_dbg = 1;
 static const char enable_fpu = 0;
 static const char enable_tsc = 1;
+static const char enable_irqc = 1;
 const int immu_tlb_count = (1<<immu_tlb_count_log2);
 const int dmmu_tlb_count = (1<<dmmu_tlb_count_log2);
 
@@ -113,8 +114,13 @@ void wmsr(msr_index_t index, cpu_word_t val)
         case MSR_TCR:
           msr_unpack_field(TCR, CNT, val);
           msr_unpack_bit(TCR, EN, val);
-          msr_unpack_bit(TCR, IE, val);
-          msr_unpack_bit(TCR, IR, val);
+          msr_unpack_bit(TCR, P, val);
+          tsc_update_tcr();
+          break;
+          
+        /* MSR bank - IRQC */
+        case MSR_IMR:
+          msr.IMR = val;
           break;
           
         default:
@@ -205,6 +211,7 @@ cpu_word_t rmsr(msr_index_t index)
           ret |= val_pack_bit(CPUID, FDCA, enable_dcache);
           ret |= val_pack_bit(CPUID, FDBG, enable_dbg);
           ret |= val_pack_bit(CPUID, FFPU, enable_fpu);
+          ret |= val_pack_bit(CPUID, FIRQC, enable_irqc);
           ret |= val_pack_bit(CPUID, FTSC, enable_tsc);
           return ret;
           
@@ -248,9 +255,15 @@ cpu_word_t rmsr(msr_index_t index)
         case MSR_TCR:
           ret = msr_pack_field(TCR, CNT);
           ret |= msr_pack_bit(TCR, EN);
-          ret |= msr_pack_bit(TCR, IE);
-          ret |= msr_pack_bit(TCR, IR);
+          ret |= msr_pack_bit(TCR, P);
           return ret;
+          
+        /* MSR bank - IRQC */
+        case MSR_IMR:
+          return msr.IMR;
+
+        case MSR_IRR:
+          return msr.IRR;
           
         default:
           {

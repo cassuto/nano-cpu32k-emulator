@@ -143,6 +143,12 @@ cpu_exec(void)
           goto handle_exception;
         }
       
+      /* response asynchronous interrupts */
+      if (irqc_handle_irqs() < 0)
+        {
+          goto handle_exception;
+        }
+      
       /* fetch instruction */
       phy_addr_t insn_pa = 0;
       if (immu_translate_vma(cpu_pc, &insn_pa) < 0)
