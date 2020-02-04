@@ -9,8 +9,8 @@ static const int cpuid_ver = 1;
 static const int cpuid_rev = 0;
 static const char enable_imm = 1;
 static const char enable_dmm = 1;
-static const char enable_icache = 1;
-static const char enable_dcache = 1;
+static const char enable_icache = 0;
+static const char enable_dcache = 0;
 static const char enable_dbg = 1;
 static const char enable_fpu = 0;
 static const char enable_tsc = 1;
@@ -143,7 +143,7 @@ void wmsr(msr_index_t index, cpu_word_t val)
                 msr_unpack_bit_dup(ITLBH[offset], ITLBH, RX, val);
                 msr_unpack_bit_dup(ITLBH[offset], ITLBH, NC, val);
                 msr_unpack_bit_dup(ITLBH[offset], ITLBH, S, val);
-                msr_unpack_bit_dup(ITLBH[offset], ITLBH, PPN, val);
+                msr_unpack_field_dup(ITLBH[offset], ITLBH, PPN, val);
                 break;
               }
               
@@ -155,7 +155,7 @@ void wmsr(msr_index_t index, cpu_word_t val)
                 msr_unpack_field_dup(DTLBL[offset], DTLBL, VPN, val);
                 break;
               }
-            if(index >= MSR_DTLBH && index < MSR_DTLBH+dmmu_tlb_count);
+            if(index >= MSR_DTLBH && index < MSR_DTLBH+dmmu_tlb_count)
               {
                 int offset = index - MSR_DTLBH;
                 msr_unpack_bit_dup(DTLBH[offset], DTLBH, P, val);
@@ -167,7 +167,7 @@ void wmsr(msr_index_t index, cpu_word_t val)
                 msr_unpack_bit_dup(DTLBH[offset], DTLBH, RR, val);
                 msr_unpack_bit_dup(DTLBH[offset], DTLBH, NC, val);
                 msr_unpack_bit_dup(DTLBH[offset], DTLBH, S, val);
-                msr_unpack_bit_dup(DTLBH[offset], DTLBH, PPN, val);
+                msr_unpack_field_dup(DTLBH[offset], DTLBH, PPN, val);
                 break;
               }
               
@@ -285,7 +285,7 @@ cpu_word_t rmsr(msr_index_t index)
                 ret |= msr_pack_bit_dup(ITLBH[offset], ITLBH, RX);
                 ret |= msr_pack_bit_dup(ITLBH[offset], ITLBH, NC);
                 ret |= msr_pack_bit_dup(ITLBH[offset], ITLBH, S);
-                ret |= msr_pack_bit_dup(ITLBH[offset], ITLBH, PPN);
+                ret |= msr_pack_field_dup(ITLBH[offset], ITLBH, PPN);
                 return ret;
               }
               
@@ -297,7 +297,7 @@ cpu_word_t rmsr(msr_index_t index)
                 ret |= msr_pack_field_dup(DTLBL[offset], DTLBL, VPN);
                 break;
               }
-            if(index >= MSR_DTLBH && index < MSR_DTLBH+dmmu_tlb_count);
+            if(index >= MSR_DTLBH && index < MSR_DTLBH+dmmu_tlb_count)
               {
                 int offset = index - MSR_DTLBH;
                 ret = msr_pack_bit_dup(DTLBH[offset], DTLBH, P);
@@ -309,7 +309,7 @@ cpu_word_t rmsr(msr_index_t index)
                 ret |= msr_pack_bit_dup(DTLBH[offset], DTLBH, RR);
                 ret |= msr_pack_bit_dup(DTLBH[offset], DTLBH, NC);
                 ret |= msr_pack_bit_dup(DTLBH[offset], DTLBH, S);
-                ret |= msr_pack_bit_dup(DTLBH[offset], DTLBH, PPN);
+                ret |= msr_pack_field_dup(DTLBH[offset], DTLBH, PPN);
                 return ret;
               }
               
