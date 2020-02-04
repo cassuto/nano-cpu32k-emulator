@@ -132,7 +132,6 @@ void wmsr(msr_index_t index, cpu_word_t v)
                 int offset = index - MSR_ITLBL;
                 msr_unpack_bit_dup(ITLBL[offset], ITLBL, V, val);
                 msr_unpack_field_dup(ITLBL[offset], ITLBL, VPN, val);
-                printf("%#x vpn=%x v=%d val=%#x\n", offset, msr.ITLBL[offset].VPN, msr.ITLBL[offset].V, val);
                 break;
               }
             if(index >= MSR_ITLBH && index < MSR_ITLBH+immu_tlb_count)
@@ -146,7 +145,6 @@ void wmsr(msr_index_t index, cpu_word_t v)
                 msr_unpack_bit_dup(ITLBH[offset], ITLBH, NC, val);
                 msr_unpack_bit_dup(ITLBH[offset], ITLBH, S, val);
                 msr_unpack_field_dup(ITLBH[offset], ITLBH, PPN, val);
-                printf("%#x ppn=%x\n", offset, msr.ITLBH[offset].PPN);
                 break;
               }
               

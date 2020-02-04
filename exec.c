@@ -2,11 +2,12 @@
 #include "cpu.h"
 #include "ncpu32k-opcodes.h"
 #include "ncpu32k-exceptions.h"
+#include "parse-symtable.h"
 
 /*
  * Configurations
  */
-//#define TRACE_CALL_STACK
+#define TRACE_CALL_STACK
 /* #undef TRACE_CALL_STACK */
 //#define TRACE_STACK_POINTER
 /* #undef TRACE_STACK_POINTER */
@@ -58,15 +59,19 @@ cpu_reset(vm_addr_t reset_vect)
  */
 #ifdef TRACE_CALL_STACK
 static inline void
-trace_call_stack_jmp(vm_addr_t insn_pc, vm_addr_t lnk_pc, vm_addr_t new_pc)
+trace_call_stack_jmp(vm_addr_t insn_pc, vm_addr_t lnk_pc, vm_addr_t target_pc)
 {
-  verbose_print_1("%d# (%#x): call %x, ret=%x\n", ++stack_depth, insn_pc, new_pc, lnk_pc);
+  const struct sym_node *sym = find_symbol(target_pc);
+  if(!sym)
+    verbose_print_1("%d# (%#x): call %x, ret=%x\n", ++stack_depth, insn_pc, target_pc, lnk_pc);
+  else
+    verbose_print_1("%d# (%#x): call %s(%x), ret=%x\n", ++stack_depth, insn_pc, sym->symbol, target_pc, lnk_pc);
 }
 
 static inline void
-trace_call_stack_return(vm_addr_t insn_pc, vm_addr_t new_pc)
+trace_call_stack_return(vm_addr_t insn_pc, vm_addr_t target_pc)
 {
-  verbose_print_1("%d# (%#x): return to %x\n", --stack_depth, insn_pc, new_pc);
+  verbose_print_1("%d# (%#x): return to %x\n", --stack_depth, insn_pc, target_pc);
 }
 #endif
 
@@ -168,6 +173,17 @@ cpu_exec(void)
       uint32_t rel26 = INS32_GET_BITS(current_ins, REL26);
       uint8_t attr = INS32_GET_BITS(current_ins, ATTR);
 
+
+#if 0
+      if(cpu_pc==0xa92224) {
+        printf("PA=%x\n", cpu_get_reg(4));
+      }
+#endif
+      
+#if 0
+        printf("PC=%X, PA=%X\n", cpu_pc, insn_pa);
+#endif
+      
       switch( opcode )
         {
           case INS32_OP_AND:
@@ -222,10 +238,6 @@ cpu_exec(void)
           case INS32_OP_JMP_I:
             {
               cpu_pc = cpu_pc + rel26_sig_ext(rel26);
-#ifdef TRACE_CALL_STACK
-              vm_addr_t lnkpc = cpu_pc + INSN_LEN;
-              trace_call_stack_jmp(lnkpc - INSN_LEN, lnkpc, cpu_pc);
-#endif
               goto flush_pc;
             }
           case INS32_OP_JMP_I_LNK:
@@ -405,6 +417,9 @@ cpu_exec(void)
                 {
                   goto handle_exception;
                 }
+if(cpu_pc==3229584024){
+  printf("ldh va=%x pa=%x\n", va, pa);
+}
               cpu_set_reg(rd, (cpu_unsigned_word_t)phy_readm16(pa));
             }
             break;

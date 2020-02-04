@@ -11,7 +11,8 @@ OBJS = main-loop.o \
 		i-mmu.o \
 		d-mmu.o \
 		tsc.o \
-		irqc.o
+		irqc.o \
+		parse-symtable.o
     
 DEPS := $(OBJS:.o=.d)
 
