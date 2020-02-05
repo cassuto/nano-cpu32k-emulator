@@ -7,7 +7,7 @@
 /*
  * Configurations
  */
-#define TRACE_CALL_STACK
+//#define TRACE_CALL_STACK
 /* #undef TRACE_CALL_STACK */
 //#define TRACE_STACK_POINTER
 /* #undef TRACE_STACK_POINTER */
@@ -54,6 +54,7 @@ cpu_reset(vm_addr_t reset_vect)
   init_msr();
 }
 
+extern char flag;
 /*
  * Debugging staffs
  */
@@ -61,6 +62,13 @@ cpu_reset(vm_addr_t reset_vect)
 static inline void
 trace_call_stack_jmp(vm_addr_t insn_pc, vm_addr_t lnk_pc, vm_addr_t target_pc)
 {
+#if 0
+  if(target_pc==0xc005a8b8) {
+    printf("break point at %#x!", insn_pc);
+    getchar();
+  }
+#endif
+  if(!flag) return;
   const struct sym_node *sym = find_symbol(target_pc);
   if(!sym)
     verbose_print_1("%d# (%#x): call %x, ret=%x\n", ++stack_depth, insn_pc, target_pc, lnk_pc);
@@ -71,6 +79,7 @@ trace_call_stack_jmp(vm_addr_t insn_pc, vm_addr_t lnk_pc, vm_addr_t target_pc)
 static inline void
 trace_call_stack_return(vm_addr_t insn_pc, vm_addr_t target_pc)
 {
+  if(!flag) return;
   verbose_print_1("%d# (%#x): return to %x\n", --stack_depth, insn_pc, target_pc);
 }
 #endif
@@ -174,6 +183,9 @@ cpu_exec(void)
       uint8_t attr = INS32_GET_BITS(current_ins, ATTR);
 
 
+      if(0&&flag) {
+        printf("%#X\n", cpu_pc);
+      }
 #if 0
       if(cpu_pc==0xa92224) {
         printf("PA=%x\n", cpu_get_reg(4));
@@ -267,7 +279,7 @@ cpu_exec(void)
                     msr.PSR.CC = ( (cpu_unsigned_word_t)cpu_get_reg(rs1) > (cpu_unsigned_word_t)cpu_get_reg(rs2) );
                     break;
                   default:
-                    cpu_raise_exception(VECT_EINSN, 0, 0);
+                    cpu_raise_exception(VECT_EINSN, cpu_pc, 0);
                     goto handle_exception;
                 }
               break;
@@ -452,7 +464,7 @@ if(cpu_pc==3229584024){
             break;
             
           default:
-            cpu_raise_exception(VECT_EINSN, 0, 0);
+            cpu_raise_exception(VECT_EINSN, cpu_pc, 0);
             goto handle_exception;
         }
       
