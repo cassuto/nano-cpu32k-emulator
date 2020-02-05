@@ -89,6 +89,13 @@ void wmsr(msr_index_t index, cpu_word_t v)
           msr.ELSA = val;
           break;
           
+        /* MSR bank - ICA */
+        case MSR_ICINV:
+          break;
+        /* MSR bank - DCA */
+        case MSR_DCINV:
+          break;
+          
         /* MSR bank - DBG */
         case MSR_DBGR_NUMPORT:
           {
@@ -97,7 +104,7 @@ void wmsr(msr_index_t index, cpu_word_t v)
               printf("break point!");
               getchar();
             }
-            if(val==0x433) {
+            if(val==0x22) {
               flag=1;
             }
 #endif
@@ -122,6 +129,7 @@ void wmsr(msr_index_t index, cpu_word_t v)
           msr_unpack_bit(TCR, EN, val);
           msr_unpack_bit(TCR, P, val);
           tsc_update_tcr();
+		  printf("%x set TCR = %x en=%d\n", cpu_pc, val, msr.TCR.EN);
           break;
           
         /* MSR bank - IRQC */
