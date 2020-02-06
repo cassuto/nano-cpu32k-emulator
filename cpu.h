@@ -165,6 +165,21 @@ extern void phy_writem8(phy_addr_t addr, uint8_t val);
 extern void phy_writem16(phy_addr_t addr, uint16_t val);
 extern void phy_writem32(phy_addr_t addr, uint32_t val);
 
+typedef void (*pfn_writem8)(phy_addr_t addr, uint8_t val);
+typedef void (*pfn_writem16)(phy_addr_t addr, uint16_t val);
+typedef void (*pfn_writem32)(phy_addr_t addr, uint32_t val);
+typedef uint8_t (*pfn_readm8)(phy_addr_t addr);
+typedef uint16_t (*pfn_readm16)(phy_addr_t addr);
+typedef uint32_t (*pfn_readm32)(phy_addr_t addr);
+
+extern void mmio_register_writem8(phy_addr_t start_addr, phy_addr_t end_addr, pfn_writem8 callback);
+extern void mmio_register_writem16(phy_addr_t start_addr, phy_addr_t end_addr, pfn_writem16 callback);
+extern void mmio_register_writem32(phy_addr_t start_addr, phy_addr_t end_addr, pfn_writem32 callback);
+
+extern void mmio_register_readm8(phy_addr_t start_addr, phy_addr_t end_addr, pfn_readm8 callback);
+extern void mmio_register_readm16(phy_addr_t start_addr, phy_addr_t end_addr, pfn_readm16 callback);
+extern void mmio_register_readm32(phy_addr_t start_addr, phy_addr_t end_addr, pfn_readm32 callback);
+
 /*
  * debug.c
  */

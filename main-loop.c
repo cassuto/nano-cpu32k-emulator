@@ -59,8 +59,11 @@ int main(int argc, char *argv[])
         }
       printf("Symbol table '%s' is loaded!\n", symtable_filename);
     }
-    
-  if( (rc = cpu_exec_init(memory_size)) )
+  
+  if( (rc = memory_init(memory_size)) )
+    return report_error("memory_init()", rc);
+  
+  if( (rc = cpu_exec_init()) )
     return report_error("cpu_exec_init()", rc);
 
   if( (rc = memory_load_address_fp(fp, VECT_ERST)) )

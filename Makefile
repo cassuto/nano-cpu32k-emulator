@@ -5,7 +5,7 @@ LDFLAGS = -g
 
 OBJS = main-loop.o \
 		exec.o \
-		memory.o \
+		memory-mmio.o \
 		debug.o \
 		msr.o \
 		i-mmu.o \
