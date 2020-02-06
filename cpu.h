@@ -36,7 +36,7 @@ struct regfile_s
 };
 extern vm_addr_t cpu_pc;
 extern struct msr_s msr;
-int cpu_exec_init(int memory_size);
+int cpu_exec_init(void);
 void cpu_reset(vm_addr_t reset_vect);
 int cpu_exec(void);
 void cpu_raise_exception(vm_addr_t vector, vm_addr_t lsa, char syscall);
@@ -124,6 +124,7 @@ struct tcr_s
 {
   uint32_t CNT;
   char EN;
+  char I;
   char P;
 };
 
@@ -151,47 +152,23 @@ extern const int dmmu_tlb_count;
 /*
  * memory.c
  */
+int memory_init(int memory_size);
 int memory_load_address_fp(FILE *fp, phy_addr_t baseaddr);
 
 extern char *cpu_memory;
+
+extern uint8_t phy_readm8(phy_addr_t addr);
+extern uint16_t phy_readm16(phy_addr_t addr);
+extern uint32_t phy_readm32(phy_addr_t addr);
+
+extern void phy_writem8(phy_addr_t addr, uint8_t val);
+extern void phy_writem16(phy_addr_t addr, uint16_t val);
+extern void phy_writem32(phy_addr_t addr, uint32_t val);
 
 /*
  * debug.c
  */
 void debug_putc(uint8_t ch);
-
-static inline uint8_t phy_readm8(phy_addr_t addr)
-{
-  return cpu_memory[addr];
-}
-static inline uint16_t phy_readm16(phy_addr_t addr)
-{
-  return ((uint16_t)phy_readm8(addr + 1) << 8) | (uint16_t)phy_readm8(addr);
-}
-static inline uint32_t phy_readm32(phy_addr_t addr)
-{
-  return ((uint32_t)phy_readm8(addr + 3) << 24) |
-         ((uint32_t)phy_readm8(addr + 2) << 16) |
-         ((uint32_t)phy_readm8(addr + 1) << 8) |
-         (uint32_t)phy_readm8(addr);
-}
-
-static inline void phy_writem8(phy_addr_t addr, uint8_t val)
-{
-  cpu_memory[addr] = val;
-}
-static inline void phy_writem16(phy_addr_t addr, uint16_t val)
-{
-  phy_writem8(addr, val & 0x00ff);
-  phy_writem8(addr + 1, val >> 8);
-}
-static inline void phy_writem32(phy_addr_t addr, uint32_t val)
-{
-  phy_writem8(addr, val & 0xff);
-  phy_writem8(addr + 1, (val >> 8) & 0xff);
-  phy_writem8(addr + 2, (val >> 16) & 0xff);
-  phy_writem8(addr + 3, val >> 24);
-}
 
 #define panic(rc) exit(rc);
 

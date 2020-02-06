@@ -127,6 +127,7 @@ void wmsr(msr_index_t index, cpu_word_t v)
         case MSR_TCR:
           msr_unpack_field(TCR, CNT, val);
           msr_unpack_bit(TCR, EN, val);
+		  msr_unpack_bit(TCR, I, val);
           msr_unpack_bit(TCR, P, val);
           tsc_update_tcr();
 		  printf("%x set TCR = %x en=%d\n", cpu_pc, val, msr.TCR.EN);
@@ -269,6 +270,7 @@ cpu_word_t rmsr(msr_index_t index)
         case MSR_TCR:
           ret = msr_pack_field(TCR, CNT);
           ret |= msr_pack_bit(TCR, EN);
+		  ret |= msr_pack_bit(TCR, I);
           ret |= msr_pack_bit(TCR, P);
           return ret;
           

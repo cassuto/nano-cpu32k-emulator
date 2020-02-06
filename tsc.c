@@ -13,7 +13,7 @@ int tsc_clk()
 {
   if (msr.TCR.EN)
     {
-      if ((msr.TSR & CNT_MASK) == msr.TCR.CNT)
+      if (msr.TCR.I && (msr.TSR & CNT_MASK) == msr.TCR.CNT)
         {
           msr.TCR.P = 1;
           tsc_update_tcr();
@@ -28,5 +28,5 @@ int tsc_clk()
  */
 void tsc_update_tcr()
 {
-  irqc_set_interrupt(IRQ_TSC, msr.TCR.P);
+  irqc_set_interrupt(IRQ_TSC, msr.TCR.P && msr.TCR.I);
 }

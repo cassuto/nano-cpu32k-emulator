@@ -206,7 +206,9 @@
 #define MSR_TCR_CNT	0x0fffffff
 #define MSR_TCR_EN_SHIFT 28
 #define MSR_TCR_EN	(1 << MSR_TCR_EN_SHIFT)
-#define MSR_TCR_P_SHIFT 29
+#define MSR_TCR_I_SHIFT 29
+#define MSR_TCR_I	(1 << MSR_TCR_I_SHIFT)
+#define MSR_TCR_P_SHIFT 30
 #define MSR_TCR_P	(1 << MSR_TCR_P_SHIFT)
 
 #endif /* NCPU32K_MSR_H */
