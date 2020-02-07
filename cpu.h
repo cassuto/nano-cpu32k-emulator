@@ -182,11 +182,6 @@ extern void mmio_register_readm32(phy_addr_t start_addr, phy_addr_t end_addr, pf
 
 #define MMIO_PHY_BASE (0x80000000)
 
-/*
- * debug.c
- */
-void debug_putc(uint8_t ch);
-
 #define panic(rc) exit(rc);
 
 #endif

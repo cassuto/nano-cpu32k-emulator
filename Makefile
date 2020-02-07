@@ -13,6 +13,7 @@ OBJS = main-loop.o \
 		tsc.o \
 		irqc.o \
 		parse-symtable.o \
+		trace-runtime-stack.o \
 		device-tree.o \
 		device-ata.o
     

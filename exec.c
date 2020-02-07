@@ -2,46 +2,25 @@
 #include "cpu.h"
 #include "ncpu32k-opcodes.h"
 #include "ncpu32k-exceptions.h"
-#include "parse-symtable.h"
+#include "trace-runtime-stack.h"
 
-/*
- * Configurations
- */
-//#define TRACE_CALL_STACK
-/* #undef TRACE_CALL_STACK */
-//#define TRACE_STACK_POINTER
-/* #undef TRACE_STACK_POINTER */
-//#define TRACE_EXCEPTION
-/* #undef TRACE_EXCEPTION */
-#define VERBOSE 1
-
-/*
- * Global data variables
- */
 vm_addr_t cpu_pc = 0;
 static struct regfile_s cpu_regfile;
-#ifdef TRACE_CALL_STACK
-static int stack_depth = 0;
-#endif
 struct msr_s msr;
 
-#if VERBOSE > 1
-#define verbose_print(...) printf(__VA_ARGS__)
-#else
-#define verbose_print(...) ((void)0)
-#endif
-#if VERBOSE == 1
-#define verbose_print_1(...) printf(__VA_ARGS__)
-#else
-#define verbose_print_1(...) ((void)0)
-#endif
-
+/**
+ * @brief Init CPU.
+ * @return status code.
+ */
 int
 cpu_exec_init()
 {
   return 0;
 }
 
+/**
+ * @brief Reset CPU.
+ */
 void
 cpu_reset(vm_addr_t reset_vect)
 {
@@ -51,63 +30,6 @@ cpu_reset(vm_addr_t reset_vect)
   memset(&msr, 0, sizeof msr);
   init_msr();
 }
-
-extern char flag;
-/*
- * Debugging staffs
- */
-#ifdef TRACE_CALL_STACK
-static inline void
-trace_call_stack_jmp(vm_addr_t insn_pc, vm_addr_t lnk_pc, vm_addr_t target_pc)
-{
-#if 0
-  if(target_pc==0xc005a8b8) {
-    printf("break point at %#x!", insn_pc);
-    getchar();
-  }
-#endif
-  if(!flag) return;
-  const struct sym_node *sym = find_symbol(target_pc);
-  if(!sym)
-    verbose_print_1("%d# (%#x): call %x, ret=%x\n", ++stack_depth, insn_pc, target_pc, lnk_pc);
-  else
-    verbose_print_1("%d# (%#x): call %s(%x), ret=%x\n", ++stack_depth, insn_pc, sym->symbol, target_pc, lnk_pc);
-}
-
-static inline void
-trace_call_stack_return(vm_addr_t insn_pc, vm_addr_t target_pc)
-{
-  if(!flag) return;
-  verbose_print_1("%d# (%#x): return to %x\n", --stack_depth, insn_pc, target_pc);
-}
-#endif
-
-#ifdef TRACE_STACK_POINTER
-static inline void
-trace_stack_pointer_ld(vm_addr_t pc, vm_addr_t addr, cpu_word_t sp)
-{
-  verbose_print_1("(%#x): sp <- &%#x(%#x)\n", pc, addr, sp);
-}
-
-static inline void
-trace_stack_pointer_mov(vm_addr_t pc, cpu_word_t sp)
-{
-  verbose_print_1("(%#x): sp <- %#x\n", pc, sp);
-}
-
-static inline void
-trace_stack_pointer_st(vm_addr_t pc, vm_addr_t addr, cpu_word_t sp)
-{
-  verbose_print_1("(%#x): %#x <- sp(%#x)\n", pc, addr, sp);
-}
-#endif
-
-void
-memory_breakpoint(vm_addr_t addr, uint32_t val)
-{
-  verbose_print_1("memory BP (%#x): addr = %#x, val = %#x\n", cpu_pc, addr, val);
-}
-
 
 static inline void
 cpu_set_reg(uint16_t addr, cpu_word_t val)
@@ -144,6 +66,10 @@ rel26_sig_ext(uint32_t rel26)
   return (((int32_t)(rel26<<INSN_LEN_SHIFT) ^ 0x8000000) - 0x8000000);
 }
 
+/**
+ * @brief Run CPU emulation main loop
+ * @return statsu code.
+ */
 int
 cpu_exec(void)
 {
@@ -180,20 +106,6 @@ cpu_exec(void)
       uint32_t rel26 = INS32_GET_BITS(current_ins, REL26);
       uint8_t attr = INS32_GET_BITS(current_ins, ATTR);
 
-
-      if(0 && flag) {
-        printf("%#X\n", cpu_pc);
-      }
-#if 0
-      if(cpu_pc==0xa92224) {
-        printf("PA=%x\n", cpu_get_reg(4));
-      }
-#endif
-      
-#if 0
-        printf("PC=%X, PA=%X\n", cpu_pc, insn_pa);
-#endif
-      
       switch( opcode )
         {
           case INS32_OP_AND:
@@ -427,9 +339,6 @@ cpu_exec(void)
                 {
                   goto handle_exception;
                 }
-if(cpu_pc==3229584024){
-  printf("ldh va=%x pa=%x\n", va, pa);
-}
               cpu_set_reg(rd, (cpu_unsigned_word_t)phy_readm16(pa));
             }
             break;
@@ -473,7 +382,13 @@ flush_pc:
     }
 }
 
-/* must goto handle_exception after raised an exception */
+/**
+ * @brief Raise an exception to handle for CPU.
+ * NOTE! you must goto handle_exception after raised an exception
+ * @param [in] vector Target exception vector.
+ * @param [in] lsa Target LSA virtual address.
+ * @param [in] syscall Indicates if it is a syscall.
+ */
 void
 cpu_raise_exception(vm_addr_t vector, vm_addr_t lsa, char syscall)
 {

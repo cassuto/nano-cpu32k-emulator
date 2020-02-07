@@ -1,5 +1,6 @@
 
 #include "cpu.h"
+#include "debug.h"
 #include "ncpu32k-msr.h"
 
 #define immu_tlb_count_log2 7 /* 0~7 = log2(count of TLBs) */
@@ -104,7 +105,7 @@ void wmsr(msr_index_t index, cpu_word_t v)
               printf("break point!");
               getchar();
             }
-            if(val==0x22) {
+            if(val==0xeee2e) {
               flag=1;
             }
 #endif
@@ -130,11 +131,13 @@ void wmsr(msr_index_t index, cpu_word_t v)
 		  msr_unpack_bit(TCR, I, val);
           msr_unpack_bit(TCR, P, val);
           tsc_update_tcr();
-		  printf("%x set TCR = %x en=%d\n", cpu_pc, val, msr.TCR.EN);
+		  //printf("%x set TCR = %x en=%d I=%d P=%d CNT=%d\n", cpu_pc, val, msr.TCR.EN, msr.TCR.I, msr.TCR.P, msr.TCR.CNT);
           break;
           
         /* MSR bank - IRQC */
         case MSR_IMR:
+          if(val!=0&&val!=1)
+          printf("%x -> %x IMR\n", msr.IMR, val);
           msr.IMR = val;
           break;
           
@@ -270,7 +273,7 @@ cpu_word_t rmsr(msr_index_t index)
         case MSR_TCR:
           ret = msr_pack_field(TCR, CNT);
           ret |= msr_pack_bit(TCR, EN);
-		  ret |= msr_pack_bit(TCR, I);
+          ret |= msr_pack_bit(TCR, I);
           ret |= msr_pack_bit(TCR, P);
           return ret;
           
