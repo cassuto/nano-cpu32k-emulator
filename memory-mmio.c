@@ -36,13 +36,13 @@ memory_load_address_fp(FILE *fp, phy_addr_t baseaddr)
 }
 
 static inline struct mmio_node *
-match_mmio_handler(struct mmio_node *doamin, phy_addr_t addr, char write)
+match_mmio_handler(struct mmio_node *domain, phy_addr_t addr, char w)
 {
   if(addr >= MMIO_PHY_BASE)
     {
-      for(struct mmio_node *node=doamin; node; node=node->next)
+      for(struct mmio_node *node=domain; node; node=node->next)
         {
-          if (node->write==write && node->start_addr >= addr && addr <= node->end_addr)
+          if (node->write==w && node->start_addr <= addr && addr <= node->end_addr)
             {
               return node;
             }
@@ -50,7 +50,7 @@ match_mmio_handler(struct mmio_node *doamin, phy_addr_t addr, char write)
       fprintf(stderr, "%s(): accessing invalid mmio address %#x.\n", __func__, addr);
       panic(1);
     }
-  return NULL;
+  return 0;
 }
 
 /*
