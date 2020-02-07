@@ -37,10 +37,8 @@ struct msr_s msr;
 #endif
 
 int
-cpu_exec_init(int memory_size)
+cpu_exec_init()
 {
-  if( !(cpu_memory = calloc(memory_size, 1)) )
-    return -EM_NO_MEMORY;
   return 0;
 }
 
@@ -183,7 +181,7 @@ cpu_exec(void)
       uint8_t attr = INS32_GET_BITS(current_ins, ATTR);
 
 
-      if(0&&flag) {
+      if(0 && flag) {
         printf("%#X\n", cpu_pc);
       }
 #if 0

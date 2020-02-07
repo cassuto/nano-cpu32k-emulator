@@ -12,7 +12,9 @@ OBJS = main-loop.o \
 		d-mmu.o \
 		tsc.o \
 		irqc.o \
-		parse-symtable.o
+		parse-symtable.o \
+		device-tree.o \
+		device-ata.o
     
 DEPS := $(OBJS:.o=.d)
 

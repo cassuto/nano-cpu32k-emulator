@@ -2,6 +2,7 @@
 #include "cpu.h"
 #include "ncpu32k-exceptions.h"
 #include "parse-symtable.h"
+#include "device-tree.h"
 
 static int memory_size = 32 * 1024 * 1024;
 
@@ -63,13 +64,15 @@ int main(int argc, char *argv[])
   if( (rc = memory_init(memory_size)) )
     return report_error("memory_init()", rc);
   
-  if( (rc = cpu_exec_init()) )
-    return report_error("cpu_exec_init()", rc);
-
   if( (rc = memory_load_address_fp(fp, VECT_ERST)) )
     return report_error("memory_load_address_fp()", rc);
 
+  if( (rc = devicetree_init()) )
+    return report_error("devicetree_init()", rc);
 
+  if( (rc = cpu_exec_init()) )
+    return report_error("cpu_exec_init()", rc);
+  
   cpu_reset(reset_vector);
 
   if( (rc = cpu_exec()) )
