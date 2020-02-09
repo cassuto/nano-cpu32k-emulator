@@ -1,6 +1,6 @@
 
 CC = gcc
-CFLAGS = -std=gnu99 -g -Wall -Wno-unused-function $(INCS) $(DEFS)
+CFLAGS = -std=gnu99 -g -O2 -Wall -Wno-unused-function $(INCS) $(DEFS)
 LDFLAGS = -g
 
 OBJS = main-loop.o \
