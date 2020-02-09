@@ -3,7 +3,10 @@
 
 struct device_ata;
 
-extern int dev_ata_init(struct device_ata **dev, phy_addr_t mmio_base, int irq);
+extern int dev_ata_init(struct device_ata **dev,
+						phy_addr_t mmio_command_base,
+						phy_addr_t mmio_control_base,
+						int irq);
 extern void dev_ata_reset(struct device_ata *dev);
 
 #endif /* DEVICE_ATA_H_ */

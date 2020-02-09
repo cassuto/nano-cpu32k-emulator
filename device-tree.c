@@ -9,6 +9,10 @@ const int irq_ata = 3;
 
 static struct device_ata *dev_ata;
 
+/**
+ * @brief Init Device Tree.
+ * @return status code
+ */
 int devicetree_init(void)
 {
   int rc;

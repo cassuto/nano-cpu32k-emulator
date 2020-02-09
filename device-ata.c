@@ -1,9 +1,10 @@
 
 #include "cpu.h"
 #include "device-ata.h"
+#include "trace-runtime-stack.h"
 
 const phy_addr_t ata_mmio_size = 0x1000;
-const char *firmware_revision = ""; /* 8 ASCII chars */
+const char *firmware_revision = "ncpu32k-v0"; /* 8 ASCII chars */
 const char *model_number = "ncpu32k-ATA"; /* 40 ASCII chars */
 
 /*
@@ -75,7 +76,7 @@ static uint32_t dev_ata_readreg32(phy_addr_t addr, void *opaque);
 
 typedef uint32_t ata_lba_t;
 
-#define ATA_CHUNK_MAXSIZE (64*1024) /* 64KiB */
+#define ATA_CHUNK_MAXSIZE (64*1024*1024)
 
 struct device_ata {
   /* ATA control block regfile */
@@ -97,19 +98,41 @@ struct device_ata {
   int buf_pos;
   int buf_len;
   int irq;
+  phy_addr_t ReadReg_DeviceControl, WriteReg_DeviceControl;
   
   uint16_t disk_chunk[ATA_CHUNK_MAXSIZE/2];
 };
 
+static void id16_fill_string(uint16_t *id16, const char *str)
+{
+  while(*str)
+    {
+      *(id16++) = ((uint16_t)(*str) << 8) | (uint16_t)(*(str+1));
+      str+=2;
+    }
+}
 
-int dev_ata_init(struct device_ata **dev_out, phy_addr_t mmio_base, int irq)
+int dev_ata_init(struct device_ata **dev_out,
+                  phy_addr_t mmio_command_base,
+                  phy_addr_t mmio_control_base,
+                  int irq)
 {
   const int heads = 16;
   const int sectors = 64;
   const int cylinders = ATA_CHUNK_MAXSIZE/(heads*sectors*512);
   const int sects_total = heads*sectors*cylinders;
+  /* calc base address of ATA */
+  const phy_addr_t mmio_base = mmio_command_base;
+  /* sanity check */
+  if (mmio_control_base < mmio_base || mmio_control_base > (mmio_base+ata_mmio_size-1))
+    {
+      panic(1);
+    }
   
   struct device_ata *dev = (struct device_ata *)malloc(sizeof(struct device_ata));
+
+  dev->ReadReg_DeviceControl = mmio_control_base & (ata_mmio_size-1);
+  dev->WriteReg_DeviceControl = dev->ReadReg_DeviceControl;
   dev->irq = irq;
   
   /*
@@ -136,10 +159,10 @@ int dev_ata_init(struct device_ata **dev_out, phy_addr_t mmio_base, int irq)
   dev->id16[22] = 4;
   /* Firmware revision (8 ASCII chars) */
   memset(&dev->id16[23], ' ', 4 * sizeof(uint16_t));
-  memcpy(&dev->id16[27], firmware_revision, strlen(firmware_revision));
+  id16_fill_string(&dev->id16[27], firmware_revision);
   /* Model number (40 ASCII chars) */
   memset(&dev->id16[27], ' ', 20 * sizeof(uint16_t));
-  memcpy(&dev->id16[27], model_number, strlen(model_number));
+  id16_fill_string(&dev->id16[27], model_number);
   
   /* bit[15..8] Vendor Unique, bit[7..0] Read/Write Multiple: max num of sects */
   dev->id16[47] = 0x8000 | 128;
@@ -178,7 +201,7 @@ int dev_ata_init(struct device_ata **dev_out, phy_addr_t mmio_base, int irq)
   /* Command set/feature enabled */
   dev->id16[86] = 0;
   dev->id16[87] = (1<<14); /* hardcoded to 1 */
-  
+
   /*
    * Register it on MMIO
    */
@@ -188,8 +211,6 @@ int dev_ata_init(struct device_ata **dev_out, phy_addr_t mmio_base, int irq)
   mmio_register_readm8(mmio_base, mmio_base + ata_mmio_size-1, dev_ata_readreg8, dev);
   mmio_register_readm16(mmio_base, mmio_base + ata_mmio_size-1, dev_ata_readreg16, dev);
   mmio_register_readm32(mmio_base, mmio_base + ata_mmio_size-1, dev_ata_readreg32, dev);
-  
-  dev->irq = irq;
   
   dev_ata_reset(dev);
   
@@ -243,16 +264,20 @@ static inline void set_sector(struct device_ata *dev, ata_lba_t sector)
 static void dev_ata_writereg8(phy_addr_t addr, uint8_t val, void *opaque)
 {
   struct device_ata *dev = (struct device_ata *)opaque;
-  addr &= (ata_mmio_size-1);
+  //printf("%s() %x %x\n", __func__, addr, val);
 
+  addr &= (ata_mmio_size-1);
   if (addr == WriteReg_DriverHead)
     {
       dev->RegDriverHead = val;
       dev->DRV = (val & DriverHead_DRV) ? 0 : 1;
+      //printf("Head %x\n", (val&0xF));
+      //printf("Drive. %d\n", dev->DRV);
+      //printf("LBA Mode %x\n", ((val>>6)&1));
       return;
     }
 
-  if (addr == 0x100) //device control register
+  if (addr == dev->WriteReg_DeviceControl)
     {
       if (!(val&DeviceControl_RST) && (dev->RegDeviceControl&DeviceControl_RST)) /* reset done */
         {
@@ -264,6 +289,7 @@ static void dev_ata_writereg8(phy_addr_t addr, uint8_t val, void *opaque)
           dev->RegCylinderHigh = 0x0;
           dev->RegError = 0x1;
           dev->RegCommand = 0x0;
+          //trace_print_frames();
         }
       else if ((val&DeviceControl_RST) && !(dev->RegDeviceControl&DeviceControl_RST)) /* reset */
         {
@@ -327,6 +353,52 @@ static void dev_ata_writereg8(phy_addr_t addr, uint8_t val, void *opaque)
                 }
               break;
 
+            case CMD_ReadSector_WRetry:
+            case CMD_WriteSector_WRetry:
+              {
+                ata_lba_t sector = get_sector(dev);
+                if (dev->RegSectorCount == 0)
+                  {
+                    dev->RegSectorCount = 256;
+                  }
+                dev->buf_base = dev->disk_chunk;
+                dev->buf_pos = sector*256;
+                dev->buf_len = dev->buf_pos+256;
+                dev->RegStatus = Status_DRDY | Status_DSC | Status_DRQ;
+                dev->RegError = 0x0;
+                if (dev->RegCommand == CMD_ReadSector_WRetry)
+                  {
+                    if (!(dev->RegDeviceControl & DeviceControl_IEN))
+                      {
+                        irqc_set_interrupt(dev->irq, 1);
+                      }
+                  }
+              }
+              break;
+
+            case CMD_ReadMultiple:
+            case CMD_WriteMultiple:
+              {
+                ata_lba_t sector = get_sector(dev);
+                if (dev->RegSectorCount == 0)
+                  {
+                    dev->RegSectorCount = 256;
+                  }
+                dev->buf_base = dev->disk_chunk;
+                dev->buf_pos = sector*256;
+                dev->buf_len = dev->buf_pos + 256*dev->RegSectorCount;
+                dev->RegStatus = Status_DRDY | Status_DSC | Status_DRQ;
+                dev->RegError = 0x0;
+                if (dev->RegCommand == CMD_ReadMultiple)
+                  {
+                    if (!(dev->RegDeviceControl & DeviceControl_IEN))
+                      {
+                        irqc_set_interrupt(dev->irq, 1);
+                      }
+                  }
+              }
+              break;
+
             default:
               fprintf(stderr, "%s() invalid reg address %#x\n", __func__, addr);
               panic(1);
@@ -350,12 +422,18 @@ static void dev_ata_writereg32(phy_addr_t addr, uint32_t val, void *opaque)
 static uint8_t dev_ata_readreg8(phy_addr_t addr, void *opaque)
 {
   struct device_ata *dev = (struct device_ata *)opaque;
+  //printf("%s() %x \n", __func__, addr);
   if (!dev->DRV)
     {
       /* DRIVER 0 is not presented. */
+      //printf("===============================\n");
       return 0xff;
     }
   addr &= (ata_mmio_size-1);
+  if (addr == dev->ReadReg_DeviceControl)
+    {
+      return dev->RegStatus; /* read as status register */
+    }
   switch(addr)
     {
       case ReadReg_Error:
@@ -379,10 +457,7 @@ static uint8_t dev_ata_readreg8(phy_addr_t addr, void *opaque)
       case ReadReg_Status:
         irqc_set_interrupt(dev->irq, 0);
         return dev->RegStatus;
-
-      case 0x100: // device control register, but read as status register
-        return dev->RegStatus;
-
+        
       default:
         fprintf(stderr, "%s() invalid reg address %#x\n", __func__, addr);
         panic(1);
@@ -394,8 +469,33 @@ static uint8_t dev_ata_readreg8(phy_addr_t addr, void *opaque)
 static uint16_t dev_ata_readreg16(phy_addr_t addr, void *opaque)
 {
   struct device_ata *dev = (struct device_ata *)opaque;
+  //printf("%s() %x \n", __func__, addr);
   addr &= (ata_mmio_size-1);
-  
+  if (addr == ReadReg_Data)
+    {
+      uint16_t ret = dev->buf_base[dev->buf_pos];
+
+      dev->buf_pos++;
+      /* We have reached out of the buffer */
+      if (dev->buf_pos >= dev->buf_len)
+        {
+          /* FIXME DSC, or Drive Seek Complete bit is not managed */
+          dev->RegStatus = Status_DRDY | Status_DSC;
+          
+          if ((dev->RegCommand == CMD_ReadSector_WRetry) && (dev->RegSectorCount > 1))
+            {
+              dev->RegSectorCount--;
+              set_sector(dev, get_sector(dev) + 1);
+              dev->buf_len += 256;
+              dev->RegStatus = Status_DRDY | Status_DSC | Status_DRQ;
+              if (!(dev->RegDeviceControl & DeviceControl_IEN))
+                {
+                  irqc_set_interrupt(dev->irq, 1);
+                }
+            }
+        }
+      return ret;
+    }
   fprintf(stderr, "%s() invalid reg address %#x\n", __func__, addr);
   panic(1);
   return 0;
