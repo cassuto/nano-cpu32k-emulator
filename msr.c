@@ -20,8 +20,6 @@ static const char enable_irqc = 1;
 const int immu_tlb_count = (1<<immu_tlb_count_log2);
 const int dmmu_tlb_count = (1<<dmmu_tlb_count_log2);
 
-char flag;
-
 #define normalize_bit(val) (val ? 1:0)
 
 #define msr_unpack_bit(reg, bit, val) \
@@ -101,18 +99,6 @@ void wmsr(msr_index_t index, cpu_word_t v)
         /* MSR bank - DBG */
         case MSR_DBGR_NUMPORT:
           {
-#if 1
-            if(val==0xbadbeefd) {
-              printf("break point!");
-              getchar();
-            }
-            if(val==0xeffffda) {
-              //trace_print_frames();
-            }
-            if(val==0x800000) {
-              //panic(1);
-            }
-#endif
             char buff[64], *p = buff;
             snprintf(buff, sizeof(buff), "DEBUG NUM PORT - %#x\n", val);
             while(*p)
@@ -132,16 +118,13 @@ void wmsr(msr_index_t index, cpu_word_t v)
         case MSR_TCR:
           msr_unpack_field(TCR, CNT, val);
           msr_unpack_bit(TCR, EN, val);
-		  msr_unpack_bit(TCR, I, val);
+          msr_unpack_bit(TCR, I, val);
           msr_unpack_bit(TCR, P, val);
           tsc_update_tcr();
-		  //printf("%x set TCR = %x en=%d I=%d P=%d CNT=%d\n", cpu_pc, val, msr.TCR.EN, msr.TCR.I, msr.TCR.P, msr.TCR.CNT);
           break;
           
         /* MSR bank - IRQC */
         case MSR_IMR:
-          if(val!=0&&val!=1)
-          printf("%x -> %x IMR\n", msr.IMR, val);
           msr.IMR = val;
           break;
           
