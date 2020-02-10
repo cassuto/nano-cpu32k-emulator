@@ -89,11 +89,6 @@ cpu_exec(void)
           goto handle_exception;
         }
       
-      /*if(cpu_pc==0xc02b409c) {
-        printf("r6 = %x\n", cpu_get_reg(6));
-        panic(1);
-      }*/
-      
       /* fetch instruction */
       phy_addr_t insn_pa = 0;
       if (immu_translate_vma(cpu_pc, &insn_pa) < 0)
