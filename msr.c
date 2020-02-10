@@ -1,6 +1,7 @@
 
 #include "cpu.h"
 #include "debug.h"
+#include "trace-runtime-stack.h"
 #include "ncpu32k-msr.h"
 
 #define immu_tlb_count_log2 7 /* 0~7 = log2(count of TLBs) */
@@ -105,8 +106,11 @@ void wmsr(msr_index_t index, cpu_word_t v)
               printf("break point!");
               getchar();
             }
-            if(val==0xeee2e) {
-              flag=1;
+            if(val==0xeffffda) {
+              //trace_print_frames();
+            }
+            if(val==0x800000) {
+              //panic(1);
             }
 #endif
             char buff[64], *p = buff;

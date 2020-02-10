@@ -75,17 +75,24 @@ cpu_exec(void)
 {
   for(;;)
     {
+      for(int i=0;i<8;++i) {
       /* not a cycle-accuracy emulation for TSC */
       if (tsc_clk() < 0)
         {
           goto handle_exception;
         }
-      
+      }
+
       /* response asynchronous interrupts */
       if (irqc_handle_irqs() < 0)
         {
           goto handle_exception;
         }
+      
+      /*if(cpu_pc==0xc02b409c) {
+        printf("r6 = %x\n", cpu_get_reg(6));
+        panic(1);
+      }*/
       
       /* fetch instruction */
       phy_addr_t insn_pa = 0;
