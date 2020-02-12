@@ -92,8 +92,12 @@ void wmsr(msr_index_t index, cpu_word_t v)
         /* MSR bank - ICA */
         case MSR_ICINV:
           break;
+        case MSR_ICFLS:
+          break;
         /* MSR bank - DCA */
         case MSR_DCINV:
+          break;
+        case MSR_DCFLS:
           break;
           
         /* MSR bank - DBG */
