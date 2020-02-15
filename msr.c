@@ -50,6 +50,23 @@ void warn_illegal_access_reg(const char *reg) {
 void wmsr(msr_index_t index, cpu_word_t v)
 {
   cpu_unsigned_word_t val=v;
+  switch(index)
+  {
+    /* MSR bank - DBG */
+        case MSR_DBGR_NUMPORT:
+          {
+            char buff[64], *p = buff;
+            snprintf(buff, sizeof(buff), "DEBUG NUM PORT - %#x\n", val);
+            while(*p)
+              debug_putc(*p++);
+            return;
+          }
+          
+        case MSR_DBGR_MSGPORT:
+          debug_putc(val);
+          return;
+  }
+  
   if(msr.PSR.RM)
     {
       switch(index)
@@ -100,19 +117,9 @@ void wmsr(msr_index_t index, cpu_word_t v)
         case MSR_DCFLS:
           break;
           
-        /* MSR bank - DBG */
-        case MSR_DBGR_NUMPORT:
-          {
-            char buff[64], *p = buff;
-            snprintf(buff, sizeof(buff), "DEBUG NUM PORT - %#x\n", val);
-            while(*p)
-              debug_putc(*p++);
-            break;
-          }
+        
           
-        case MSR_DBGR_MSGPORT:
-          debug_putc(val);
-          break;
+        
           
         /* MSR bank - TSC */
         case MSR_TSR:

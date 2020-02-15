@@ -74,14 +74,12 @@ int
 cpu_exec(void)
 {
   for(;;)
-    {
-      for(int i=0;i<8;++i) {
+    {  
       /* not a cycle-accuracy emulation for TSC */
       if (tsc_clk() < 0)
         {
           goto handle_exception;
         }
-      }
 
       /* response asynchronous interrupts */
       if (irqc_handle_irqs() < 0)

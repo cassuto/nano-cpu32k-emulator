@@ -1,4 +1,7 @@
-/**@file Simple signal-thread call stack tracing */
+/**@file Simple signal-thread call stack tracing
+ * NOTE! This never works on a NON call/return-normal-form programs
+ * and multitask systems.
+ */
 #include "cpu.h"
 #include "debug.h"
 #include "parse-symtable.h"
